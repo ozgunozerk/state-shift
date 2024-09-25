@@ -4,8 +4,6 @@
 /// This file serves the purpose of revealing what's happening behind the curtains.
 use std::marker::PhantomData;
 
-use type_state_macro::{require, states, switch_to, type_state};
-
 #[derive(Debug)]
 struct Player {
     race: Race,
@@ -15,16 +13,20 @@ struct Player {
 
 #[derive(Debug, PartialEq)]
 enum Race {
-    #[allow(unused)]
     Orc,
+    #[allow(unused)]
     Human,
 }
 
-struct PlayerBuilder<State1> {
+struct PlayerBuilder<State1 = InitialMarker> {
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
     _state: (PhantomData<State1>),
+}
+
+mod sealed {
+    pub trait Sealed {}
 }
 
 pub trait Initial: sealed::Sealed {}
@@ -93,7 +95,7 @@ where
 }
 impl<A> PlayerBuilder<A>
 where
-    A: RaceSet,
+    A: LevelSet,
 {
     fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder<SkillSlotsSetMarker> {
         let skill_slots = match self.race {
@@ -128,4 +130,17 @@ where
             skill_slots: self.skill_slots.expect("type safety ensures this is set"),
         }
     }
+}
+
+fn main() {
+    let player = PlayerBuilder::new()
+        .set_race(Race::Orc)
+        .set_level(1)
+        .set_skill_slots(1)
+        .say_hi()
+        .build();
+
+    println!("Race: {:?}", player.race);
+    println!("Level: {}", player.level);
+    println!("Skill slots: {}", player.skill_slots);
 }

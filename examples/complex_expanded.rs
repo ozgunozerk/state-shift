@@ -3,7 +3,6 @@
 ///
 /// This file serves the purpose of revealing what's happening behind the curtains.
 use std::marker::PhantomData;
-use type_state_macro::{require, states, switch_to};
 
 #[derive(Debug)]
 struct Player {
@@ -16,15 +15,16 @@ struct Player {
 #[derive(Debug)]
 enum Race {
     Orc,
+    #[allow(unused)]
     Human,
 }
 
-struct PlayerBuilder<State1, State2, State3> {
+struct PlayerBuilder<State1 = InitialMarker, State2 = InitialMarker, State3 = InitialMarker> {
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
     spell_slots: Option<u8>,
-    state: (
+    _state: (
         PhantomData<State1>,
         PhantomData<State2>,
         PhantomData<State3>,
@@ -67,7 +67,7 @@ impl PlayerBuilder {
             level: None,
             skill_slots: None,
             spell_slots: None,
-            state: (PhantomData, PhantomData, PhantomData),
+            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 }
@@ -83,7 +83,7 @@ where
                     level: self.level,
                     skill_slots: self.skill_slots,
                     spell_slots: self.spell_slots,
-                    state: (PhantomData, PhantomData, PhantomData),
+                    _state: (PhantomData, PhantomData, PhantomData),
                 }
             }
         }
@@ -99,19 +99,14 @@ where
                 let level = match self.race {
                     Some(Race::Orc) => level_modifier + 2,
                     Some(Race::Human) => level_modifier,
-                    None => {
-                        ::core::panicking::panic_fmt(format_args!(
-                            "internal error: entered unreachable code: {0}",
-                            format_args!("type safety ensures that `race` is initialized")
-                        ));
-                    }
+                    None => unreachable!("type safety ensures that `race` is initialized"),
                 };
                 PlayerBuilder {
                     race: self.race,
                     level: Some(level),
                     skill_slots: self.skill_slots,
                     spell_slots: self.spell_slots,
-                    state: (PhantomData, PhantomData, PhantomData),
+                    _state: (PhantomData, PhantomData, PhantomData),
                 }
             }
         }
@@ -130,19 +125,14 @@ where
                 let skill_slots = match self.race {
                     Some(Race::Orc) => skill_slot_modifier,
                     Some(Race::Human) => skill_slot_modifier + 1,
-                    None => {
-                        ::core::panicking::panic_fmt(format_args!(
-                            "internal error: entered unreachable code: {0}",
-                            format_args!("type safety ensures that `race` should be initialized")
-                        ));
-                    }
+                    None => unreachable!("type safety ensures that `race` should be initialized"),
                 };
                 PlayerBuilder {
                     race: self.race,
                     level: self.level,
                     skill_slots: Some(skill_slots),
                     spell_slots: self.spell_slots,
-                    state: (PhantomData, PhantomData, PhantomData),
+                    _state: (PhantomData, PhantomData, PhantomData),
                 }
             }
         }
@@ -172,7 +162,7 @@ where
                     level: self.level,
                     skill_slots: self.skill_slots,
                     spell_slots: Some(spell_slots),
-                    state: (PhantomData, PhantomData, PhantomData),
+                    _state: (PhantomData, PhantomData, PhantomData),
                 }
             }
         }
@@ -180,12 +170,9 @@ where
 }
 impl<A, B, C> PlayerBuilder<A, B, C> {
     fn say_hi(self) -> Self {
-        {
-            {
-                ::std::io::_print(format_args!("Hi!\n"));
-            };
-            self
-        }
+        println!("Hi!");
+
+        self
     }
 }
 impl<A, B, C> PlayerBuilder<A, B, C>
@@ -202,4 +189,19 @@ where
             }
         }
     }
+}
+
+fn main() {
+    let player = PlayerBuilder::new()
+        .set_race(Race::Orc)
+        .set_level(10)
+        .set_skill_slots(1)
+        .set_spells(1)
+        .say_hi()
+        .build();
+
+    println!("Race: {:?}", player.race);
+    println!("Level: {}", player.level);
+    println!("Skill slots: {}", player.skill_slots);
+    println!("Spell slots: {}", player.spell_slots);
 }
