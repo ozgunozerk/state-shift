@@ -1,3 +1,7 @@
+/// Here you can find the `cargo expand` output of the `complex_example.rs` test file.
+/// This is a rough `expansion`, and does not expand irrelevant parts of the code (e.g. `#[derive(Debug)]`, etc.)
+///
+/// This file serves the purpose of revealing what's happening behind the curtains.
 use std::marker::PhantomData;
 use type_state_macro::{require, states, switch_to};
 
@@ -55,19 +59,15 @@ impl LevelSet for LevelSetMarker {}
 impl SkillSlotsSet for SkillSlotsSetMarker {}
 impl SpellSlotsSet for SpellSlotsSetMarker {}
 
-impl<A, B, C> PlayerBuilder<A, B, C>
-where
-    A: Initial,
-{
+// put the constructors in a separate impl block
+impl PlayerBuilder {
     fn new() -> Self {
-        {
-            PlayerBuilder {
-                race: None,
-                level: None,
-                skill_slots: None,
-                spell_slots: None,
-                state: (PhantomData, PhantomData, PhantomData),
-            }
+        PlayerBuilder {
+            race: None,
+            level: None,
+            skill_slots: None,
+            spell_slots: None,
+            state: (PhantomData, PhantomData, PhantomData),
         }
     }
 }
@@ -202,7 +202,4 @@ where
             }
         }
     }
-}
-fn main() {
-    let player = PlayerBuilder::<InitialMarker, InitialMarker, InitialMarker>::new();
 }
