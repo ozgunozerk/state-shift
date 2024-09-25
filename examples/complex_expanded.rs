@@ -19,7 +19,12 @@ enum Race {
     Human,
 }
 
-struct PlayerBuilder<State1 = InitialMarker, State2 = InitialMarker, State3 = InitialMarker> {
+struct PlayerBuilder<State1 = Initial, State2 = Initial, State3 = Initial>
+where
+    State1: TypeStateProtector,
+    State2: TypeStateProtector,
+    State3: TypeStateProtector,
+{
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
@@ -35,29 +40,25 @@ mod sealed {
     pub trait Sealed {}
 }
 
-pub trait Initial: sealed::Sealed {}
-pub trait RaceSet: sealed::Sealed {}
-pub trait LevelSet: sealed::Sealed {}
-pub trait SkillSlotsSet: sealed::Sealed {}
-pub trait SpellSlotsSet: sealed::Sealed {}
+pub trait TypeStateProtector: sealed::Sealed {}
 
-struct InitialMarker;
-struct RaceSetMarker;
-struct LevelSetMarker;
-struct SkillSlotsSetMarker;
-struct SpellSlotsSetMarker;
+struct Initial;
+struct RaceSet;
+struct LevelSet;
+struct SkillSlotsSet;
+struct SpellSlotsSet;
 
-impl sealed::Sealed for InitialMarker {}
-impl sealed::Sealed for RaceSetMarker {}
-impl sealed::Sealed for LevelSetMarker {}
-impl sealed::Sealed for SkillSlotsSetMarker {}
-impl sealed::Sealed for SpellSlotsSetMarker {}
+impl sealed::Sealed for Initial {}
+impl sealed::Sealed for RaceSet {}
+impl sealed::Sealed for LevelSet {}
+impl sealed::Sealed for SkillSlotsSet {}
+impl sealed::Sealed for SpellSlotsSet {}
 
-impl Initial for InitialMarker {}
-impl RaceSet for RaceSetMarker {}
-impl LevelSet for LevelSetMarker {}
-impl SkillSlotsSet for SkillSlotsSetMarker {}
-impl SpellSlotsSet for SpellSlotsSetMarker {}
+impl TypeStateProtector for Initial {}
+impl TypeStateProtector for RaceSet {}
+impl TypeStateProtector for LevelSet {}
+impl TypeStateProtector for SkillSlotsSet {}
+impl TypeStateProtector for SpellSlotsSet {}
 
 // put the constructors in a separate impl block
 impl PlayerBuilder {
@@ -71,11 +72,12 @@ impl PlayerBuilder {
         }
     }
 }
-impl<A, B, C> PlayerBuilder<A, B, C>
+impl<B, C> PlayerBuilder<Initial, B, C>
 where
-    A: Initial,
+    B: TypeStateProtector,
+    C: TypeStateProtector,
 {
-    fn set_race(self, race: Race) -> PlayerBuilder<RaceSetMarker, B, C> {
+    fn set_race(self, race: Race) -> PlayerBuilder<RaceSet, B, C> {
         {
             {
                 PlayerBuilder {
@@ -89,11 +91,12 @@ where
         }
     }
 }
-impl<A, B, C> PlayerBuilder<A, B, C>
+impl<B, C> PlayerBuilder<RaceSet, B, C>
 where
-    A: RaceSet,
+    B: TypeStateProtector,
+    C: TypeStateProtector,
 {
-    fn set_level(self, level_modifier: u8) -> PlayerBuilder<RaceSetMarker, LevelSetMarker, C> {
+    fn set_level(self, level_modifier: u8) -> PlayerBuilder<RaceSet, LevelSet, C> {
         {
             {
                 let level = match self.race {
@@ -112,14 +115,12 @@ where
         }
     }
 }
-impl<A, B, C> PlayerBuilder<A, B, C>
+impl<B, C> PlayerBuilder<RaceSet, B, C>
 where
-    A: RaceSet,
+    B: TypeStateProtector,
+    C: TypeStateProtector,
 {
-    fn set_skill_slots(
-        self,
-        skill_slot_modifier: u8,
-    ) -> PlayerBuilder<RaceSetMarker, B, SkillSlotsSetMarker> {
+    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder<RaceSet, B, SkillSlotsSet> {
         {
             {
                 let skill_slots = match self.race {
@@ -138,15 +139,14 @@ where
         }
     }
 }
-impl<A, B, C> PlayerBuilder<A, B, C>
+impl<A> PlayerBuilder<A, LevelSet, SkillSlotsSet>
 where
-    B: LevelSet,
-    C: SkillSlotsSet,
+    A: TypeStateProtector,
 {
     fn set_spells(
         self,
         spell_slot_modifier: u8,
-    ) -> PlayerBuilder<SpellSlotsSetMarker, LevelSetMarker, SkillSlotsSetMarker> {
+    ) -> PlayerBuilder<SpellSlotsSet, LevelSet, SkillSlotsSet> {
         {
             {
                 let level = self
@@ -168,16 +168,22 @@ where
         }
     }
 }
-impl<A, B, C> PlayerBuilder<A, B, C> {
+impl<A, B, C> PlayerBuilder<A, B, C>
+where
+    A: TypeStateProtector,
+    B: TypeStateProtector,
+    C: TypeStateProtector,
+{
     fn say_hi(self) -> Self {
         println!("Hi!");
 
         self
     }
 }
-impl<A, B, C> PlayerBuilder<A, B, C>
+impl<B, C> PlayerBuilder<SpellSlotsSet, B, C>
 where
-    A: SpellSlotsSet,
+    B: TypeStateProtector,
+    C: TypeStateProtector,
 {
     fn build(self) -> Player {
         {

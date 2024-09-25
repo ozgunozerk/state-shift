@@ -18,10 +18,11 @@ enum Race {
     Human,
 }
 
-struct PlayerBuilder<State1 = InitialMarker> {
+struct PlayerBuilder<State1 = Initial> {
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
+    #[allow(unused_parens)]
     _state: (PhantomData<State1>),
 }
 
@@ -29,25 +30,22 @@ mod sealed {
     pub trait Sealed {}
 }
 
-pub trait Initial: sealed::Sealed {}
-pub trait RaceSet: sealed::Sealed {}
-pub trait LevelSet: sealed::Sealed {}
-pub trait SkillSlotsSet: sealed::Sealed {}
+pub trait TypeStateProtector: sealed::Sealed {}
 
-struct InitialMarker;
-struct RaceSetMarker;
-struct LevelSetMarker;
-struct SkillSlotsSetMarker;
+struct Initial;
+struct RaceSet;
+struct LevelSet;
+struct SkillSlotsSet;
 
-impl sealed::Sealed for InitialMarker {}
-impl sealed::Sealed for RaceSetMarker {}
-impl sealed::Sealed for LevelSetMarker {}
-impl sealed::Sealed for SkillSlotsSetMarker {}
+impl sealed::Sealed for Initial {}
+impl sealed::Sealed for RaceSet {}
+impl sealed::Sealed for LevelSet {}
+impl sealed::Sealed for SkillSlotsSet {}
 
-impl Initial for InitialMarker {}
-impl RaceSet for RaceSetMarker {}
-impl LevelSet for LevelSetMarker {}
-impl SkillSlotsSet for SkillSlotsSetMarker {}
+impl TypeStateProtector for Initial {}
+impl TypeStateProtector for RaceSet {}
+impl TypeStateProtector for LevelSet {}
+impl TypeStateProtector for SkillSlotsSet {}
 
 // put the constructors in a separate impl block
 impl PlayerBuilder {
@@ -61,11 +59,8 @@ impl PlayerBuilder {
     }
 }
 
-impl<A> PlayerBuilder<A>
-where
-    A: Initial,
-{
-    fn set_race(self, race: Race) -> PlayerBuilder<RaceSetMarker> {
+impl PlayerBuilder<Initial> {
+    fn set_race(self, race: Race) -> PlayerBuilder<RaceSet> {
         PlayerBuilder {
             race: Some(race),
             level: self.level,
@@ -74,11 +69,8 @@ where
         }
     }
 }
-impl<A> PlayerBuilder<A>
-where
-    A: RaceSet,
-{
-    fn set_level(self, level_modifier: u8) -> PlayerBuilder<LevelSetMarker> {
+impl PlayerBuilder<RaceSet> {
+    fn set_level(self, level_modifier: u8) -> PlayerBuilder<LevelSet> {
         let level = match self.race {
             Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
             Some(Race::Human) => level_modifier,   // humans are weak
@@ -93,11 +85,8 @@ where
         }
     }
 }
-impl<A> PlayerBuilder<A>
-where
-    A: LevelSet,
-{
-    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder<SkillSlotsSetMarker> {
+impl PlayerBuilder<LevelSet> {
+    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder<SkillSlotsSet> {
         let skill_slots = match self.race {
             Some(Race::Orc) => skill_slot_modifier,
             Some(Race::Human) => skill_slot_modifier + 1, // Human's have +1 skill slot advantage
@@ -112,17 +101,17 @@ where
         }
     }
 }
-impl<A> PlayerBuilder<A> {
+impl<A> PlayerBuilder<A>
+where
+    A: TypeStateProtector,
+{
     fn say_hi(self) -> Self {
         println!("Hi!");
 
         self
     }
 }
-impl<A> PlayerBuilder<A>
-where
-    A: SkillSlotsSet,
-{
+impl PlayerBuilder<SkillSlotsSet> {
     fn build(self) -> Player {
         Player {
             race: self.race.expect("type safety ensures this is set"),
