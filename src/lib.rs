@@ -1,8 +1,9 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
+use syn::parse::{Parse, ParseStream};
 use syn::{
-    parse::Parser, parse_macro_input, punctuated::Punctuated, Ident, ItemFn, Meta, Path,
+    parse::Parser, parse_macro_input, punctuated::Punctuated, Ident, ItemFn, ItemImpl, Meta, Path,
     ReturnType, Token,
 };
 
@@ -87,7 +88,7 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
 fn is_single_letter(path: &Path) -> bool {
     if let Some(segment) = path.segments.first() {
         let ident_str = segment.ident.to_string();
-        ident_str.len() == 1 && ident_str.chars().all(char::is_alphabetic)
+        ident_str.len() == 1
     } else {
         false
     }
@@ -105,8 +106,17 @@ pub fn switch_to(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_inputs = &input_fn.sig.inputs;
     let fn_body = &input_fn.block;
 
-    let generic_idents: Vec<proc_macro2::TokenStream> =
-        parsed_args.iter().map(|i| quote!(#i)).collect();
+    let generic_idents: Vec<proc_macro2::TokenStream> = parsed_args
+        .iter()
+        .map(|i| {
+            if i.to_string().len() > 1 {
+                let marker = Ident::new(&format!("{}Marker", i), i.span());
+                quote!(#marker)
+            } else {
+                quote!(#i)
+            }
+        })
+        .collect();
 
     // Parse the return type
     let original_return_type = match &input_fn.sig.output {
@@ -127,4 +137,74 @@ pub fn switch_to(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     output.into()
+}
+
+struct StatesInput {
+    states: Punctuated<Ident, Token![,]>,
+}
+
+impl Parse for StatesInput {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let states = Punctuated::parse_terminated(input)?;
+        Ok(StatesInput { states })
+    }
+}
+
+#[proc_macro_attribute]
+pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Parse the list of states from the attribute
+    let args = parse_macro_input!(attr as StatesInput);
+
+    // Parse the impl block
+    let input = parse_macro_input!(item as ItemImpl);
+
+    // Extract the methods from the impl block
+    let methods = input.items;
+
+    // Generate the traits, markers, and their implementations
+    let mut traits = Vec::new();
+    let mut markers = Vec::new();
+    let mut sealed_impls = Vec::new();
+    let mut trait_impls = Vec::new();
+
+    for state in args.states {
+        let trait_name = Ident::new(&format!("{}", state), state.span());
+        let marker_name = Ident::new(&format!("{}Marker", state), state.span());
+
+        traits.push(quote! {
+            pub trait #trait_name: sealed::Sealed {}
+        });
+
+        markers.push(quote! {
+            struct #marker_name;
+        });
+
+        sealed_impls.push(quote! {
+            impl sealed::Sealed for #marker_name {}
+        });
+
+        trait_impls.push(quote! {
+            impl #trait_name for #marker_name {}
+        });
+    }
+
+    // Generate the full expanded code
+    let expanded = quote! {
+        // Private module to seal traits
+        mod sealed {
+            pub trait Sealed {}
+        }
+
+        #(#traits)*
+
+        #(#markers)*
+
+        #(#sealed_impls)*
+
+        #(#trait_impls)*
+
+        #(#methods)*
+    };
+
+    TokenStream::from(expanded)
 }

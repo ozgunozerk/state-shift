@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 #[derive(Debug)]
 struct Player {
     race: Race,
@@ -12,32 +14,36 @@ enum Race {
     Human,
 }
 
-#[type_slots(3)]
-struct PlayerBuilder {
+struct PlayerBuilder<State1, State2, State3> {
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
     spell_slots: Option<u8>,
+    state: (PhantomData<State1>,PhantomData<State2>, PhantomData<State3>)
 }
 
 #[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
 impl PlayerBuilder {
     #[require(Initial, B, C)] // an be called only at `Initial` state, and doesn't change the state
     fn new() -> Self {
-        Self {
+        PlayerBuilder {
             race: None,
             level: None,
             skill_slots: None,
             spell_slots: None,
+            state: (PhantomData, PhantomData, PhantomData)
         }
     }
 
     #[require(Initial, B, C)] // can be called only at `Initial` state.
     #[switch_to(RaceSet, B, C)] // Transitions to `RaceSet` state
     fn set_race(self, race: Race) -> Self {
-        Self {
+        PlayerBuilder {
             race: Some(race),
-            ..self
+            level: self.level,
+            skill_slots: self.skill_slots,
+            spell_slots: self.spell_slots,
+            state: (PhantomData, PhantomData, PhantomData)
         }
     }
 
@@ -50,10 +56,12 @@ impl PlayerBuilder {
             None => unreachable!("type safety ensures that `race` is initialized"),
         };
 
-        Self {
+        PlayerBuilder {
+            race: self.race,
             level: Some(level),
-            state2: PhantomData,
-            ..self
+            skill_slots: self.skill_slots,
+            spell_slots: self.spell_slots,
+            state: (PhantomData, PhantomData, PhantomData)
         }
     }
 
@@ -66,10 +74,12 @@ impl PlayerBuilder {
             None => unreachable!("type safety ensures that `race` should be initialized"),
         };
 
-        Self {
+        PlayerBuilder {
+            race: self.race,
+            level: self.level,
             skill_slots: Some(skill_slots),
-            state3: PhantomData,
-            ..self
+            spell_slots: self.spell_slots,
+            state: (PhantomData, PhantomData, PhantomData)
         }
     }
 
@@ -86,10 +96,12 @@ impl PlayerBuilder {
 
         let spell_slots = level / 10 + skill_slots + spell_slot_modifier;
 
-        Self {
+        PlayerBuilder {
+            race: self.race,
+            level: self.level,
+            skill_slots: self.skill_slots,
             spell_slots: Some(spell_slots),
-            state1: PhantomData,
-            ..self
+            state: (PhantomData, PhantomData, PhantomData)
         }
     }
 
@@ -98,7 +110,7 @@ impl PlayerBuilder {
     fn say_hi(self) {
         println!("Hi!");
 
-        Self
+        self
     }
 
     #[require(SpellSlotsSet, B, C)]

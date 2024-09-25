@@ -1,6 +1,6 @@
-use type_state_macro::{require, switch_to};
-
 use std::marker::PhantomData;
+
+use type_state_macro::{require, states, switch_to};
 
 #[derive(Debug)]
 struct Player {
@@ -16,58 +16,117 @@ enum Race {
     Human,
 }
 
-// private module to seal traits
-mod sealed {
-    pub trait Sealed {}
-}
-
-pub trait Initial: sealed::Sealed {}
-pub trait RaceSet: sealed::Sealed {}
-pub trait LevelSet: sealed::Sealed {}
-pub trait SkillSlotsSet: sealed::Sealed {}
-pub trait SpellSlotsSet: sealed::Sealed {}
-
-struct InitialMarker;
-struct RaceSetMarker;
-struct LevelSetMarker;
-struct SkillSlotsSetMarker;
-struct SpellSlotsSetMarker;
-
-impl sealed::Sealed for InitialMarker {}
-impl sealed::Sealed for RaceSetMarker {}
-impl sealed::Sealed for LevelSetMarker {}
-impl sealed::Sealed for SkillSlotsSetMarker {}
-impl sealed::Sealed for SpellSlotsSetMarker {}
-
-impl Initial for InitialMarker {}
-impl RaceSet for RaceSetMarker {}
-impl LevelSet for LevelSetMarker {}
-impl SkillSlotsSet for SkillSlotsSetMarker {}
-impl SpellSlotsSet for SpellSlotsSetMarker {}
-
 struct PlayerBuilder<State1, State2, State3> {
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
     spell_slots: Option<u8>,
-    state1: PhantomData<State1>,
-    state2: PhantomData<State2>,
-    state3: PhantomData<State3>,
+    state: (
+        PhantomData<State1>,
+        PhantomData<State2>,
+        PhantomData<State3>,
+    ),
 }
 
-// #[require(Initial, B, C)] // an be called only at `Initial` state, and doesn't change the state
+#[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
+impl PlayerBuilder {
+    #[require(Initial, B, C)] // an be called only at `Initial` state, and doesn't change the state
+    fn new() -> Self {
+        PlayerBuilder {
+            race: None,
+            level: None,
+            skill_slots: None,
+            spell_slots: None,
+            state: (PhantomData, PhantomData, PhantomData),
+        }
+    }
 
-#[require(Initial, B, C)]
-#[switch_to(RaceSetMarker, B, C)] // Transitions to `RaceSet` state
-fn new() -> PlayerBuilder {
-    PlayerBuilder {
-        race: None,
-        level: None,
-        skill_slots: None,
-        spell_slots: None,
-        state1: PhantomData,
-        state2: PhantomData,
-        state3: PhantomData,
+    #[require(Initial, B, C)] // can be called only at `Initial` state.
+    #[switch_to(RaceSet, B, C)] // Transitions to `RaceSet` state
+    fn set_race(self, race: Race) -> PlayerBuilder {
+        PlayerBuilder {
+            race: Some(race),
+            level: self.level,
+            skill_slots: self.skill_slots,
+            spell_slots: self.spell_slots,
+            state: (PhantomData, PhantomData, PhantomData),
+        }
+    }
+
+    #[require(RaceSet, B, C)]
+    #[switch_to(RaceSet, LevelSet, C)]
+    fn set_level(self, level_modifier: u8) -> PlayerBuilder {
+        let level = match self.race {
+            Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
+            Some(Race::Human) => level_modifier,   // humans are weak
+            None => unreachable!("type safety ensures that `race` is initialized"),
+        };
+
+        PlayerBuilder {
+            race: self.race,
+            level: Some(level),
+            skill_slots: self.skill_slots,
+            spell_slots: self.spell_slots,
+            state: (PhantomData, PhantomData, PhantomData),
+        }
+    }
+
+    #[require(RaceSet, B, C)]
+    #[switch_to(RaceSet, B, SkillSlotsSet)]
+    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder {
+        let skill_slots = match self.race {
+            Some(Race::Orc) => skill_slot_modifier,
+            Some(Race::Human) => skill_slot_modifier + 1, // Human's have +1 skill slot advantage
+            None => unreachable!("type safety ensures that `race` should be initialized"),
+        };
+
+        PlayerBuilder {
+            race: self.race,
+            level: self.level,
+            skill_slots: Some(skill_slots),
+            spell_slots: self.spell_slots,
+            state: (PhantomData, PhantomData, PhantomData),
+        }
+    }
+
+    #[require(A, LevelSet, SkillSlotsSet)]
+    #[switch_to(SpellSlotsSet, LevelSet, SkillSlotsSet)]
+    fn set_spells(self, spell_slot_modifier: u8) -> PlayerBuilder {
+        let level = self
+            .level
+            .expect("type safety ensures that `level` is initialized");
+        let skill_slots = self
+            .skill_slots
+            .as_ref()
+            .expect("type safety ensures that `skill_slots` is initialized");
+
+        let spell_slots = level / 10 + skill_slots + spell_slot_modifier;
+
+        PlayerBuilder {
+            race: self.race,
+            level: self.level,
+            skill_slots: self.skill_slots,
+            spell_slots: Some(spell_slots),
+            state: (PhantomData, PhantomData, PhantomData),
+        }
+    }
+
+    /// doesn't require any state, so this is available at any state
+    #[require(A, B, C)]
+    fn say_hi(self) -> Self {
+        println!("Hi!");
+
+        self
+    }
+
+    #[require(SpellSlotsSet, B, C)]
+    fn build(self) -> Player {
+        Player {
+            race: self.race.expect("type safety ensures this is set"),
+            level: self.level.expect("type safety ensures this is set"),
+            skill_slots: self.skill_slots.expect("type safety ensures this is set"),
+            spell_slots: self.spell_slots.expect("type safety ensures this is set"),
+        }
     }
 }
 
