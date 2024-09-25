@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use type_state_macro::{require, states, switch_to};
+use type_state_macro::{require, states, switch_to, type_state};
 
 #[derive(Debug)]
 struct Player {
@@ -16,31 +16,29 @@ enum Race {
     Human,
 }
 
-struct PlayerBuilder<State1, State2, State3> {
+#[type_state(state_slots = 3, Default = Initial)]
+struct PlayerBuilder {
     race: Option<Race>,
     level: Option<u8>,
     skill_slots: Option<u8>,
     spell_slots: Option<u8>,
-    state: (
-        PhantomData<State1>,
-        PhantomData<State2>,
-        PhantomData<State3>,
-    ),
 }
 
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
+// put the constructors in a separate impl block
 impl PlayerBuilder {
-    #[require(Initial, B, C)] // an be called only at `Initial` state, and doesn't change the state
     fn new() -> Self {
         PlayerBuilder {
             race: None,
             level: None,
             skill_slots: None,
             spell_slots: None,
-            state: (PhantomData, PhantomData, PhantomData),
+            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
+}
 
+#[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
+impl PlayerBuilder {
     #[require(Initial, B, C)] // can be called only at `Initial` state.
     #[switch_to(RaceSet, B, C)] // Transitions to `RaceSet` state
     fn set_race(self, race: Race) -> PlayerBuilder {
@@ -49,7 +47,7 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: self.skill_slots,
             spell_slots: self.spell_slots,
-            state: (PhantomData, PhantomData, PhantomData),
+            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -67,7 +65,7 @@ impl PlayerBuilder {
             level: Some(level),
             skill_slots: self.skill_slots,
             spell_slots: self.spell_slots,
-            state: (PhantomData, PhantomData, PhantomData),
+            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -85,7 +83,7 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: Some(skill_slots),
             spell_slots: self.spell_slots,
-            state: (PhantomData, PhantomData, PhantomData),
+            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -107,7 +105,7 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: self.skill_slots,
             spell_slots: Some(spell_slots),
-            state: (PhantomData, PhantomData, PhantomData),
+            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -131,5 +129,9 @@ impl PlayerBuilder {
 }
 
 fn main() {
-    let player = PlayerBuilder::<InitialMarker, InitialMarker, InitialMarker>::new();
+    let player = PlayerBuilder::new()
+        .set_race(Race::Orc)
+        .set_level(10)
+        .set_skill_slots(10)
+        .set_spells(10);
 }

@@ -1,10 +1,11 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::parse::{Parse, ParseStream};
 use syn::{
-    parse::Parser, parse_macro_input, punctuated::Punctuated, Ident, ItemFn, ItemImpl, Meta, Path,
-    ReturnType, Token,
+    parse::{Parse, ParseStream, Parser},
+    parse_macro_input,
+    punctuated::Punctuated,
+    Fields, Ident, ItemFn, ItemImpl, ItemStruct, Meta, Path, ReturnType, Token,
 };
 
 #[proc_macro_attribute]
@@ -207,4 +208,54 @@ pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+#[proc_macro_attribute]
+pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
+    // Parse the state_slots and default_state from the arguments
+    let input_args: Vec<_> = args.into_iter().collect();
+    let state_slots: usize = if let Some(proc_macro::TokenTree::Literal(lit)) = input_args.get(2) {
+        lit.to_string().parse().unwrap()
+    } else {
+        panic!("Expected a valid number for state_slots.");
+    };
+
+    let default_state: Ident = if let Some(proc_macro::TokenTree::Ident(ident)) = input_args.get(6)
+    {
+        Ident::new(&format!("{}Marker", ident), ident.span().into())
+    } else {
+        panic!("Expected an identifier for default_state.");
+    };
+
+    // Parse the input struct
+    let input_struct = parse_macro_input!(input as ItemStruct);
+    let struct_name = &input_struct.ident;
+    // Extract fields from the struct
+    let struct_fields = match input_struct.fields {
+        Fields::Named(ref fields) => &fields.named,
+        Fields::Unnamed(_) => panic!("Expected named fields in struct."),
+        Fields::Unit => panic!("Expected a struct with fields."),
+    };
+
+    // Generate state generics
+    let state_idents: Vec<Ident> = (0..state_slots)
+        .map(|i| Ident::new(&format!("State{}", i + 1), struct_name.span()))
+        .collect();
+
+    let default_generics = vec![quote!(#default_state); state_slots];
+
+    // Construct the _state field with PhantomData
+    let phantom_fields = state_idents
+        .iter()
+        .map(|ident| quote!(PhantomData<#ident>))
+        .collect::<Vec<_>>();
+
+    let output = quote! {
+        struct #struct_name<#(#state_idents = #default_generics),*> {
+            #struct_fields
+            _state: (#(#phantom_fields),*),
+        }
+    };
+
+    output.into()
 }
