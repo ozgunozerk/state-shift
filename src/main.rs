@@ -16,7 +16,7 @@ enum Race {
     Human,
 }
 
-#[type_state(state_slots = 3, Default = Initial)]
+#[type_state(state_slots = 3, default_state = Initial)]
 struct PlayerBuilder {
     race: Option<Race>,
     level: Option<u8>,
