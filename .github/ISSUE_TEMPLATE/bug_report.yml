@@ -1,0 +1,17 @@
+name: 🐞 Bug report
+description: Create a report to help state-shift
+title: "🐞 [Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: if you want, you can include screenshots as well :)
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?

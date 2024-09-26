@@ -1,0 +1,12 @@
+name: 🎁 Feature Request
+description: Suggest an idea for this project ⚡️
+title: "🎁 [Feature Request]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: What is the feature you would like to see?
+      description: if applicable, you can provide example code snippets.
+    validations:
+      required: true
