@@ -431,7 +431,7 @@ And you know how Rust compiler is. It is very strict about types!
 >
 > So hoping it will become stable in the future and we won't have to worry about it.
 
-4. In order to have `states`, we have to have them in the first place. The macros expand your struct with a hidden `_state` field. So, when you are constructing your struct, you have to provide this field as well. Don't worry about the value, it will be just `(PhantomData)`. Feel free to take a look at the example codes to see how it is used.
+4. In order to have `states`, the macros expand your struct with a hidden `_state` field. So, when you are constructing your struct, you have to provide this field as well. Don't worry about the value, it will be just `(PhantomData)`. Feel free to take a look at the example codes to see how it is used.
 
 > [!TIP]
 > ```rust
