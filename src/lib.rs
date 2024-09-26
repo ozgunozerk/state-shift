@@ -1,4 +1,5 @@
 extern crate proc_macro;
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -10,29 +11,36 @@ use syn::{
 
 #[proc_macro_attribute]
 pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input arguments and function
+    // Parse the input arguments and function: (State1, State2, ...)
     let args_parser = Punctuated::<Ident, Token![,]>::parse_terminated;
     let parsed_args = args_parser.parse(args).unwrap();
 
     let input_fn = parse_macro_input!(input as ItemFn);
 
-    // Only the single letter arguments will be used as generic constraints
+    // Only the single letter arguments will be used as generic constraints: (A, B, ...)
     let generic_idents: Vec<proc_macro2::TokenStream> = parsed_args
         .iter()
         .filter(|ident| is_single_letter(ident))
         .map(|ident| quote!(#ident))
         .collect();
 
+    // Get the full list of arguments as a vec: (A, B, State1, ...)
     let concrete_type: Vec<proc_macro2::TokenStream> =
         parsed_args.iter().map(|ident| quote!(#ident)).collect();
 
+    // put the sealed trait boundary for the generics:
+    /*
+    ``` where
+    A: TypeStateProtector,
+    B: TypeStateProtector,
+     */
     let where_clauses: Vec<proc_macro2::TokenStream> = parsed_args
         .iter()
         .filter(|ident| is_single_letter(ident))
         .map(|ident| quote!(#ident: TypeStateProtector))
         .collect(); // Collect into a Vec to make `is_empty()` available
 
-    // Conditionally generate the `where` clause
+    // Generate the `where` clause only if there are any constraints
     let where_clause = if !where_clauses.is_empty() {
         quote! { where #(#where_clauses),* }
     } else {
@@ -45,11 +53,11 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_inputs = &input_fn.sig.inputs;
     let fn_output = &input_fn.sig.output;
 
-    // Extract the `switch_to` attributes to include them in the output
-    let switch_to_attrs: Vec<_> = input_fn
+    // Collect all other macros except the `#[require]` attribute itself
+    let other_attrs: Vec<_> = input_fn
         .attrs
         .iter()
-        .filter(|attr| attr.path().is_ident("switch_to"))
+        .filter(|attr| !attr.path().is_ident("require"))
         .collect();
 
     // Construct the `impl` block
@@ -57,7 +65,7 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
         impl<#(#generic_idents),*> PlayerBuilder<#(#concrete_type),*>
         #where_clause
         {
-            #(#switch_to_attrs)*
+            #(#other_attrs)*
             fn #fn_name(#fn_inputs) #fn_output {
                 #fn_body
             }
@@ -75,7 +83,7 @@ fn is_single_letter(ident: &Ident) -> bool {
 
 #[proc_macro_attribute]
 pub fn switch_to(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input arguments and function
+    // Parse the input arguments and function: (State1, State2, ...)
     let args_parser = Punctuated::<Ident, Token![,]>::parse_terminated;
     let parsed_args = args_parser.parse(args).unwrap();
     let input_fn = parse_macro_input!(input as ItemFn);
@@ -85,10 +93,11 @@ pub fn switch_to(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_inputs = &input_fn.sig.inputs;
     let fn_body = &input_fn.block;
 
+    // Get the full list of arguments as a vec: (A, B, State1, ...)
     let generic_idents: Vec<proc_macro2::TokenStream> =
         parsed_args.iter().map(|i| quote!(#i)).collect();
 
-    // Parse the return type
+    // Parse the original return type from the function signature
     let original_return_type = match &input_fn.sig.output {
         ReturnType::Type(_, ty) => quote! { #ty },
         _ => panic!("Expected a return type."),
@@ -122,7 +131,7 @@ impl Parse for StatesInput {
 
 #[proc_macro_attribute]
 pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
-    // Parse the list of states from the attribute
+    // Parse the list of states from the attribute: (State1, State2, ...)
     let args = parse_macro_input!(attr as StatesInput);
 
     // Parse the impl block
@@ -131,7 +140,7 @@ pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Extract the methods from the impl block
     let methods = input.items;
 
-    // Generate the traits, markers, and their implementations
+    // Generate the marker structs, and their implementations
     let mut markers = Vec::new();
     let mut sealed_impls = Vec::new();
     let mut trait_impls = Vec::new();
@@ -175,7 +184,20 @@ pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the state_slots and default_state from the arguments
+    // Parse the `state_slots` and `default_state` from the arguments
+    /*
+    Usage: `#[type_state(state_slots = 3, default_state = Initial)]`
+
+    Indices:
+    ---
+    0. `state_slots`
+    1. `=`
+    2. `3` (this is the value you're interested in for state_slots)
+    4. `,`
+    5. `default_state`
+    6. `=`
+    7. `Initial` (this is the value you're interested in for default_state)
+     */
     let input_args: Vec<_> = args.into_iter().collect();
     let state_slots: usize = if let Some(proc_macro::TokenTree::Literal(lit)) = input_args.get(2) {
         lit.to_string().parse().unwrap()
@@ -200,7 +222,7 @@ pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
         Fields::Unit => panic!("Expected a struct with fields."),
     };
 
-    // Generate state generics
+    // Generate state generics: `struct StructName<State1, State2, ...>`
     let state_idents: Vec<Ident> = (0..state_slots)
         .map(|i| Ident::new(&format!("State{}", i + 1), struct_name.span()))
         .collect();
@@ -212,7 +234,7 @@ pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
         quote!(#state_num: TypeStateProtector)
     });
 
-    // Construct the _state field with PhantomData
+    // Construct the `_state` field with PhantomData
     let phantom_fields = state_idents
         .iter()
         .map(|ident| quote!(PhantomData<#ident>))
