@@ -9,6 +9,7 @@ license = "MIT"
 license-file = "LICENSE.txt"
 keywords = ["macro", "type", "state", "pattern", "type-state"]
 categories = ["development-tools", "rust-patterns"]
+repository = "https://github.com/ozgunozerk/state-shift"
 
 
 [dependencies]
