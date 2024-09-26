@@ -452,7 +452,7 @@ This feature was both my favorite to implement and the most brain-melting (desig
 
 **The problem:**
 
-Imagine you have three fields for your struct: `a`, `b`, and `c`. You want `c` to be set only after both `a` and `b` are set. Not just one of them—both. The problem with the default type-state pattern is that it only lets you track a single state at a time.
+Imagine you have three fields for your struct: `a`, `b`, and `c`. You want `c` to be set only after both `a` and `b` are set. Not just one of them—both.
 
 How do you accomplish this with type-state-pattern? This is a problem because the default design pattern allows you to have a single state to track.
 
