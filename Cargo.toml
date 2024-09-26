@@ -6,7 +6,6 @@ edition = "2021"
 description = "Macros for implementing Type-State-Pattern on your structs and methods"
 readme = "README.md"
 license = "MIT"
-license-file = "LICENSE.txt"
 keywords = ["macro", "type", "state", "pattern", "type-state"]
 categories = ["development-tools", "rust-patterns"]
 repository = "https://github.com/ozgunozerk/state-shift"
