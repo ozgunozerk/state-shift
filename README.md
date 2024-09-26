@@ -176,7 +176,6 @@ impl PlayerBuilder {
 }
 ```
 
-> [!TIP]
 > If you want to see what this macro expands to, check out `examples` folder. I have both a `complex_expanded.rs` and a `simple_expanded.rs`.
 
 </details>
@@ -213,8 +212,8 @@ impl PlayerBuilder {
     }
     ```
 
-    > [!CAUTION]
-    > The above code might suck the enjoyment out of writing Rust code.
+> [!CAUTION]
+> The above code might suck the enjoyment out of writing Rust code.
 
 <br/>
 <br/>
@@ -230,8 +229,8 @@ impl PlayerBuilder {
     }
     ```
 
-    > [!TIP]
-    > Mmmhh! Much better, right?
+> [!TIP]
+> Mmmhh! Much better, right?
 
 <br/>
 
@@ -262,8 +261,8 @@ impl PlayerBuilder {
         }
     }
     ```
-    > [!CAUTION]
-    > It's not immediately obvious what's going on here, which state is required, to which state it's transitioning into, etc.
+> [!CAUTION]
+> It's not immediately obvious what's going on here, which state is required, to which state it's transitioning into, etc.
 
 <br/>
 <br/>
@@ -283,14 +282,14 @@ impl PlayerBuilder {
     }
     ```
 
-    > [!TIP]
-    > Immediately signals:
-    >
-    > - which state is required.
-    >
-    > - to which state it's transitioning into.
-    >
-    > No weird generics and intermediate unit structs that hurting your brain.
+> [!TIP]
+> Immediately signals:
+>
+> - which state is required.
+>
+> - to which state it's transitioning into.
+>
+> No weird generics and intermediate unit structs that hurting your brain.
 
 <br/>
 <br/>
@@ -326,8 +325,8 @@ impl PlayerBuilder {
     impl TypeStateProtector for SpellSlotsSet {}
     ```
 
-    > [!CAUTION]
-    > EWWWW
+> [!CAUTION]
+> EWWWW
 
 <br/>
 <br/>
@@ -341,8 +340,8 @@ impl PlayerBuilder {
     }
     ```
 
-    > [!TIP]
-    > The necessary states that we want to use, cannot be more clear!
+> [!TIP]
+> The necessary states that we want to use, cannot be more clear!
 
 <br/>
 
@@ -376,73 +375,74 @@ And you know how Rust compiler is. It is very strict about types!
 ### Rules
 
 1. If your method is switching states (most probably it does), avoid using `Self` in the return position of the method's signature:
-    > [!CAUTION]
-    >
-    > ```rust
-    > fn my_method(self) -> Self { // `-> Self` ❌
-    >    // redacted body
-    > }
+   
+> [!CAUTION]
+>
+> ```rust
+> fn my_method(self) -> Self { // `-> Self` ❌
+>    // redacted body
+> }
 
-    > [!TIP]
-    > ```rust
-    > fn my_method(self) -> PlayerBuilder { // `-> ConcreteName` ✅
-    >    // redacted body
-    > }
+> [!TIP]
+> ```rust
+> fn my_method(self) -> PlayerBuilder { // `-> ConcreteName` ✅
+>    // redacted body
+> }
 
 
 2. Similarly, also avoid using `Self` in the method's body:
 
-    > [!CAUTION]
-    >
-    > ```rust
-    > fn my_method(self) -> PlayerBuilder {
-    >
-    >    Self {  // `Self {}` ❌
-    >       race: Race::human
-    >       level: self.level
-    >    }
-    > }
+> [!CAUTION]
+>
+> ```rust
+> fn my_method(self) -> PlayerBuilder {
+>
+>    Self {  // `Self {}` ❌
+>       race: Race::human
+>       level: self.level
+>    }
+> }
 
-    > [!TIP]
-    > ```rust
-    > fn my_method(self) -> PlayerBuilder {
-    >
-    >    PlayerBuilder {  // `PlayerBuilder {}` ✅
-    >       race: Race::human
-    >       level: self.level
-    >    }
-    > }
+> [!TIP]
+> ```rust
+> fn my_method(self) -> PlayerBuilder {
+>
+>    PlayerBuilder {  // `PlayerBuilder {}` ✅
+>       race: Race::human
+>       level: self.level
+>    }
+> }
 
 3. `self` is ok to use, but there is one exception:
 
-    > [!CAUTION]
-    >
-    > ```rust
-    > fn my_method(self) -> PlayerBuilder {
-    >
-    >    PlayerBuilder {
-    >       race: Race::human
-    >       ..self  // `..self` ❌
-    >    }
-    > }
+> [!CAUTION]
+>
+> ```rust
+> fn my_method(self) -> PlayerBuilder {
+>
+>    PlayerBuilder {
+>       race: Race::human
+>       ..self  // `..self` ❌
+>    }
+> }
 
-    > [!NOTE]
-    > actually this is not supported YET.
-    >
-    > So hoping it will become stable in the future and we won't have to worry about it.
+> [!NOTE]
+> actually this is not supported YET.
+>
+> So hoping it will become stable in the future and we won't have to worry about it.
 
 4. In order to have `states`, we have to have them in the first place. The macros expand your struct with a hidden `_state` field. So, when you are constructing your struct, you have to provide this field as well. Don't worry about the value, it will be just `(PhantomData)`. Feel free to take a look at the example codes to see how it is used.
 
-    > [!TIP]
-    > ```rust
-    > fn my_method(self) -> PlayerBuilder {
-    >
-    >    PlayerBuilder {
-    >       race: Race::human
-    >       level: self.level
-    >       _state: (PhantomData)  // ✅
-    >    }
-    > }
+> [!TIP]
+> ```rust
+> fn my_method(self) -> PlayerBuilder {
+>
+>    PlayerBuilder {
+>       race: Race::human
+>       level: self.level
+>       _state: (PhantomData)  // ✅
+>    }
+> }
 
 ### Tips
 
