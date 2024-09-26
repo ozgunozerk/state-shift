@@ -1,7 +1,15 @@
 [package]
-name = "type-state-macro"
+name = "state-shift"
+authors = ["Ozgun Ozerk"]
 version = "0.1.0"
 edition = "2021"
+description = "Macros for implementing Type-State-Pattern on your structs and methods"
+readme = "README.md"
+license = "MIT"
+license-file = "LICENSE.txt"
+keywords = ["macro", "type", "state", "pattern", "type-state"]
+categories = ["development-tools", "rust-patterns"]
+
 
 [dependencies]
 syn = { version = "2.0", features = ["full"] }
