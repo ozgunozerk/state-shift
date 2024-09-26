@@ -427,7 +427,7 @@ And you know how Rust compiler is. It is very strict about types!
 > }
 
 > [!NOTE]
-> actually this is not supported YET.
+> actually having `..self` is not supported by the Rust compiler in this context, YET.
 >
 > So hoping it will become stable in the future and we won't have to worry about it.
 
