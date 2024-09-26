@@ -6,19 +6,27 @@ use syn::{
     parse::{Parse, ParseStream, Parser},
     parse_macro_input,
     punctuated::Punctuated,
-    Fields, Ident, ItemFn, ItemImpl, ItemStruct, ReturnType, Token,
+    Fields, Ident, ImplItem, ItemFn, ItemImpl, ItemStruct, Meta, ReturnType, Token, Type,
 };
 
 #[proc_macro_attribute]
 pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input arguments and function: (State1, State2, ...)
+    // Parse the input arguments and function: (ImplType, State1, State2, ...)
     let args_parser = Punctuated::<Ident, Token![,]>::parse_terminated;
     let parsed_args = args_parser.parse(args).unwrap();
+
+    // Extract the first argument (the name of the impl block)
+
+    let struct_name = &parsed_args[0];
+
+    // Extract the remaining arguments (states and generics)
+
+    let remaining_args: Vec<Ident> = parsed_args.iter().skip(1).cloned().collect();
 
     let input_fn = parse_macro_input!(input as ItemFn);
 
     // Only the single letter arguments will be used as generic constraints: (A, B, ...)
-    let generic_idents: Vec<proc_macro2::TokenStream> = parsed_args
+    let generic_idents: Vec<proc_macro2::TokenStream> = remaining_args
         .iter()
         .filter(|ident| is_single_letter(ident))
         .map(|ident| quote!(#ident))
@@ -26,7 +34,7 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Get the full list of arguments as a vec: (A, B, State1, ...)
     let concrete_type: Vec<proc_macro2::TokenStream> =
-        parsed_args.iter().map(|ident| quote!(#ident)).collect();
+        remaining_args.iter().map(|ident| quote!(#ident)).collect();
 
     // put the sealed trait boundary for the generics:
     /*
@@ -34,7 +42,7 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
     A: TypeStateProtector,
     B: TypeStateProtector,
      */
-    let where_clauses: Vec<proc_macro2::TokenStream> = parsed_args
+    let where_clauses: Vec<proc_macro2::TokenStream> = remaining_args
         .iter()
         .filter(|ident| is_single_letter(ident))
         .map(|ident| quote!(#ident: TypeStateProtector))
@@ -62,7 +70,7 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Construct the `impl` block
     let output = quote! {
-        impl<#(#generic_idents),*> PlayerBuilder<#(#concrete_type),*>
+        impl<#(#generic_idents),*> #struct_name<#(#concrete_type),*>
         #where_clause
         {
             #(#other_attrs)*
@@ -135,10 +143,42 @@ pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as StatesInput);
 
     // Parse the impl block
-    let input = parse_macro_input!(item as ItemImpl);
+    let mut input = parse_macro_input!(item as ItemImpl);
+
+    // Extract the type name of the impl block (e.g., Player)
+    let impl_type = match *input.self_ty {
+        Type::Path(ref type_path) => type_path.path.segments.last().unwrap().ident.clone(),
+        _ => panic!("Unsupported type for impl block"),
+    };
 
     // Extract the methods from the impl block
-    let methods = input.items;
+    let mut methods = Vec::new();
+
+    for item in input.items.iter_mut() {
+        if let ImplItem::Fn(ref mut method) = item {
+            // Check if the method has a `#[require]` attribute
+            for attr in method.attrs.iter_mut() {
+                if attr.path().is_ident("require") {
+                    // Parse the tokens of the `#[require]` macro
+                    let mut args: Punctuated<Ident, Token![,]> =
+                        attr.parse_args_with(Punctuated::parse_terminated).unwrap();
+
+                    // Append the impl block type (e.g., Player) as the first argument
+                    args.insert(0, impl_type.clone());
+
+                    // Update the attribute tokens with the new arguments
+                    let a = match attr.meta {
+                        Meta::List(ref mut list) => list,
+                        _ => panic!("Expected a list of arguments"),
+                    };
+
+                    a.tokens = quote! { #args };
+                }
+            }
+
+            methods.push(quote! { #method });
+        }
+    }
 
     // Generate the marker structs, and their implementations
     let mut markers = Vec::new();
