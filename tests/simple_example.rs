@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use type_state_macro::{require, states, switch_to, type_state};
+use state_shift::{require, states, switch_to, type_state};
 
 #[derive(Debug)]
 struct Player {
