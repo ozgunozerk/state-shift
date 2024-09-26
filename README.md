@@ -4,7 +4,7 @@
 
 **State-Shift** is a macro library that generates **type-state-pattern boilerplate code for your structs**. So that you can write your structs as usual, but still get the benefits of type-safety!
 
-If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this is a library for you. Type-State-Pattern-Macro let's you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety. BEST OF BOTH WORLDS!
+If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this library is for you. Type-State-Pattern-Macro let's you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety. BEST OF BOTH WORLDS!
 
 
 ### What the hell is even Type-State-Pattern?
