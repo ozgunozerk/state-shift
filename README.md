@@ -354,7 +354,7 @@ this library also uses sealed-traits to ensure even more safety! And again, you 
 
 ### 6. Clear documentation
 
-I tried to document nearly everything. If you are curios on what does the macros do under the hood, even those macros are documented! Just check the inline documentation and I'm sure you will understand what's going on in a blink of an eye!
+I tried to document nearly everything. If you are curios on what do the macros do under the hood, even those macros are documented! Just check the inline documentation and I'm sure you will understand what's going on in a blink of an eye!
 
 <br/>
 
