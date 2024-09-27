@@ -48,7 +48,6 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: self.skill_slots,
             spell_slots: self.spell_slots,
-            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -66,7 +65,6 @@ impl PlayerBuilder {
             level: Some(level),
             skill_slots: self.skill_slots,
             spell_slots: self.spell_slots,
-            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -84,7 +82,6 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: Some(skill_slots),
             spell_slots: self.spell_slots,
-            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 
@@ -106,7 +103,6 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: self.skill_slots,
             spell_slots: Some(spell_slots),
-            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
 

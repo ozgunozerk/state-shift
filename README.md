@@ -99,20 +99,17 @@ struct PlayerBuilder {
     skill_slots: Option<u8>,
 }
 
-// put the constructors in a separate impl block
+#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
 impl PlayerBuilder {
-    fn new() -> Self {
+    #[require(Initial)] // can be called only at `Initial` state, and doesn't switch to a new state
+    fn new() -> PlayerBuilder {
         PlayerBuilder {
             race: None,
             level: None,
             skill_slots: None,
-            _state: (PhantomData),
         }
     }
-}
 
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
-impl PlayerBuilder {
     #[require(Initial)] // can be called only at `Initial` state.
     #[switch_to(RaceSet)] // Transitions to `RaceSet` state
     fn set_race(self, race: Race) -> PlayerBuilder {
@@ -120,7 +117,6 @@ impl PlayerBuilder {
             race: Some(race),
             level: self.level,
             skill_slots: self.skill_slots,
-            _state: (PhantomData),
         }
     }
 
@@ -137,7 +133,6 @@ impl PlayerBuilder {
             race: self.race,
             level: Some(level),
             skill_slots: self.skill_slots,
-            _state: (PhantomData),
         }
     }
 
@@ -154,7 +149,6 @@ impl PlayerBuilder {
             race: self.race,
             level: self.level,
             skill_slots: Some(skill_slots),
-            _state: (PhantomData),
         }
     }
 
@@ -277,7 +271,6 @@ impl PlayerBuilder {
             level: self.level,
             skill_slots: self.skill_slots,
             spell_slots: self.spell_slots,
-            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
     ```
@@ -375,7 +368,7 @@ And you know how Rust compiler is. It is very strict about types!
 ### Rules
 
 1. If your method is switching states (most probably it does), avoid using `Self` in the return position of the method's signature:
-   
+
 > [!CAUTION]
 >
 > ```rust
@@ -431,18 +424,23 @@ And you know how Rust compiler is. It is very strict about types!
 >
 > So hoping it will become stable in the future and we won't have to worry about it.
 
-4. In order to have `states`, the macros expand your struct with a hidden `_state` field. So, when you are constructing your struct, you have to provide this field as well. Don't worry about the value, it will be just `(PhantomData)`. Feel free to take a look at the example codes to see how it is used.
+4. These macros appends a hidden `_state` field to your struct to make it compatible with type-state-pattern. If you want to opt-out of the macros for god knows why, keep in mind that you need to provide the hidden `_state` field for your methods.
 
-> [!TIP]
+> [!WARNING]
 > ```rust
-> fn my_method(self) -> PlayerBuilder {
->
->    PlayerBuilder {
->       race: Race::human
->       level: self.level
->       _state: (PhantomData)  // ✅
->    }
+> impl PlayerBuilder {
+>     fn my_weird_method(&self) -> Self {
+>         Self {
+>             race: Some(Race::Human),
+>             level: self.level,
+>             skill_slots: self.skill_slots,
+>            _state: (PhantomData), // Don't forget this!
+>         }
+>     }
 > }
+
+> [!IMPORTANT]
+> You only need to worry about `_state` field if you want to opt-out of the macros! So, keep using the macros, and keep yourself stress free 🥂
 
 ### Tips
 

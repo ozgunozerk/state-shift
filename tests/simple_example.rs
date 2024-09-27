@@ -23,20 +23,17 @@ struct PlayerBuilder {
     skill_slots: Option<u8>,
 }
 
-// put the constructors in a separate impl block
+#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
 impl PlayerBuilder {
-    fn new() -> Self {
+    #[require(Initial)]
+    fn new() -> PlayerBuilder {
         PlayerBuilder {
             race: None,
             level: None,
             skill_slots: None,
-            _state: (PhantomData),
         }
     }
-}
 
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
-impl PlayerBuilder {
     #[require(Initial)] // can be called only at `Initial` state.
     #[switch_to(RaceSet)] // Transitions to `RaceSet` state
     fn set_race(self, race: Race) -> PlayerBuilder {
@@ -44,7 +41,6 @@ impl PlayerBuilder {
             race: Some(race),
             level: self.level,
             skill_slots: self.skill_slots,
-            _state: (PhantomData),
         }
     }
 
@@ -61,7 +57,6 @@ impl PlayerBuilder {
             race: self.race,
             level: Some(level),
             skill_slots: self.skill_slots,
-            _state: (PhantomData),
         }
     }
 
@@ -78,7 +73,6 @@ impl PlayerBuilder {
             race: self.race,
             level: self.level,
             skill_slots: Some(skill_slots),
-            _state: (PhantomData),
         }
     }
 
@@ -100,12 +94,25 @@ impl PlayerBuilder {
     }
 }
 
+// if you want to opt-out of the macros for god knows why,
+// keep in mind that you need to provide the hidden `_state` field for your methods.
+impl PlayerBuilder {
+    fn my_weird_method(&self) -> Self {
+        Self {
+            race: Some(Race::Human),
+            level: self.level,
+            skill_slots: self.skill_slots,
+            _state: (PhantomData), // Don't forget this!
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn complex_player_creation_works() {
+    fn simple_player_creation_works() {
         let player = PlayerBuilder::new()
             .set_race(Race::Human)
             .set_level(10)
@@ -116,5 +123,14 @@ mod tests {
         assert_eq!(player.race, Race::Human);
         assert_eq!(player.level, 10);
         assert_eq!(player.skill_slots, 11);
+    }
+
+    #[test]
+    fn method_outside_of_macro_works() {
+        let player = PlayerBuilder::new();
+        let another_player = PlayerBuilder::my_weird_method(&player);
+
+        assert_eq!(player.level, another_player.level);
+        assert_eq!(player.skill_slots, another_player.skill_slots);
     }
 }

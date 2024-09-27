@@ -6,7 +6,8 @@ use syn::{
     parse::{Parse, ParseStream, Parser},
     parse_macro_input,
     punctuated::Punctuated,
-    Fields, Ident, ImplItem, ItemFn, ItemImpl, ItemStruct, Meta, ReturnType, Token, Type,
+    Expr, Fields, Ident, ImplItem, ItemFn, ItemImpl, ItemStruct, Member, Meta, ReturnType, Stmt,
+    Token, Type,
 };
 
 #[proc_macro_attribute]
@@ -68,6 +69,51 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
         .filter(|attr| !attr.path().is_ident("require"))
         .collect();
 
+    // Generate PhantomData for the required number of states
+    let phantom_data_count = remaining_args.len();
+    let phantom_data: Vec<proc_macro2::TokenStream> = (0..phantom_data_count)
+        .map(|_| quote!(PhantomData))
+        .collect();
+
+    let phantom_expr = if phantom_data.len() == 1 {
+        quote! { PhantomData }
+    } else {
+        quote! { ( #(#phantom_data),* ) }
+    };
+
+    // Convert the method body to modify struct construction
+    let new_fn_body = fn_body
+        .stmts
+        .iter()
+        .map(|stmt| {
+            // Check if the statement contains the struct initialization (e.g., `PlayerBuilder {`)
+            if let Stmt::Expr(Expr::Struct(expr_struct), maybe_semi) = stmt {
+                let struct_path = &expr_struct.path;
+                if struct_path.is_ident(struct_name) {
+                    // Append `_state: (PhantomData, PhantomData, ...)` to the struct fields
+                    let mut new_fields = expr_struct.fields.clone();
+                    new_fields.push(syn::FieldValue {
+                        attrs: Vec::new(),
+                        member: Member::Named(syn::Ident::new("_state", struct_name.span())),
+                        colon_token: Some(<Token![:]>::default()),
+                        expr: Expr::Verbatim(phantom_expr.clone()),
+                    });
+
+                    // Return modified struct construction
+                    return Stmt::Expr(
+                        syn::Expr::Struct(syn::ExprStruct {
+                            fields: new_fields,
+                            ..expr_struct.clone()
+                        }),
+                        *maybe_semi,
+                    );
+                }
+            }
+            // Return the statement unchanged if it's not a struct construction
+            stmt.clone()
+        })
+        .collect::<Vec<_>>();
+
     // Construct the `impl` block
     let output = quote! {
         impl<#(#generic_idents),*> #struct_name<#(#concrete_type),*>
@@ -75,7 +121,7 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             #(#other_attrs)*
             fn #fn_name(#fn_inputs) #fn_output {
-                #fn_body
+                #(#new_fn_body)*
             }
         }
     };
