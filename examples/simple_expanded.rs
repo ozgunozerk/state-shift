@@ -23,7 +23,7 @@ struct PlayerBuilder<State1 = Initial> {
     level: Option<u8>,
     skill_slots: Option<u8>,
     #[allow(unused_parens)]
-    _state: (PhantomData<State1>),
+    _state: PhantomData<fn() -> State1>,
 }
 
 mod sealed {
@@ -48,7 +48,7 @@ impl TypeStateProtector for LevelSet {}
 impl TypeStateProtector for SkillSlotsSet {}
 
 // put the constructors in a separate impl block
-impl PlayerBuilder {
+impl PlayerBuilder<Initial> {
     fn new() -> Self {
         PlayerBuilder {
             race: None,

@@ -30,9 +30,9 @@ where
     skill_slots: Option<u8>,
     spell_slots: Option<u8>,
     _state: (
-        PhantomData<State1>,
-        PhantomData<State2>,
-        PhantomData<State3>,
+        PhantomData<fn() -> State1>,
+        PhantomData<fn() -> State2>,
+        PhantomData<fn() -> State3>,
     ),
 }
 
@@ -61,7 +61,7 @@ impl TypeStateProtector for SkillSlotsSet {}
 impl TypeStateProtector for SpellSlotsSet {}
 
 // put the constructors in a separate impl block
-impl PlayerBuilder {
+impl PlayerBuilder<Initial, Initial, Initial> {
     fn new() -> Self {
         PlayerBuilder {
             race: None,

@@ -26,20 +26,20 @@ struct PlayerBuilder {
 }
 
 // put the constructors in a separate impl block
+impl PlayerBuilder {}
+
+#[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
 impl PlayerBuilder {
+    #[require(Initial, Initial, Initial)] // require the default state for the constructor
     fn new() -> Self {
         PlayerBuilder {
             race: None,
             level: None,
             skill_slots: None,
             spell_slots: None,
-            _state: (PhantomData, PhantomData, PhantomData),
         }
     }
-}
 
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
-impl PlayerBuilder {
     #[require(Initial, B, C)] // can be called only at `Initial` state.
     #[switch_to(RaceSet, B, C)] // Transitions to `RaceSet` state
     fn set_race(self, race: Race) -> PlayerBuilder {
