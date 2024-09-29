@@ -25,7 +25,7 @@ struct PlayerBuilder {
 
 #[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
 impl PlayerBuilder {
-    #[require(Initial)]
+    #[require(Initial)] // require the default state for the constructor
     fn new() -> PlayerBuilder {
         PlayerBuilder {
             race: None,

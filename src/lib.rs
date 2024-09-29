@@ -382,12 +382,15 @@ pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
     });
 
     // Construct the `_state` field with PhantomData
+    // `_state: PhantomData<fn() -> T>`
+    // the reason for using `fn() -> T` is to: https://github.com/ozgunozerk/state-shift/issues/1
     let phantom_fields = state_idents
         .iter()
-        .map(|ident| quote!(PhantomData<#ident>))
+        .map(|ident| quote!(PhantomData<fn() -> #ident>))
         .collect::<Vec<_>>();
 
     let output = quote! {
+        #[allow(clippy::type_complexity)]
         struct #struct_name<#(#state_idents = #default_generics),*>
         where
             #(#where_clauses),*

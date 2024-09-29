@@ -2,9 +2,25 @@
 
 # What is State-Shift?
 
-**State-Shift** is a macro library that generates **type-state-pattern boilerplate code for your structs**. So that you can write your structs as usual, but still get the benefits of type-safety!
+I love type-state pattern's promises:
 
-If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this library is for you. Type-State-Pattern-Macro lets you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety. BEST OF BOTH WORLDS!
+- compile time checks
+
+- better/safer auto completion suggestions by your IDE
+
+- no additional runtime costs
+
+However, I agree that in order to utilize type-state pattern, the code has to become quite ugly. We are talking about less readable and maintainable code, just because of this.
+
+Although I'm a fan, I agree usually it's not a good idea to use type-state pattern.
+
+And THAT, my friends, bothered me...
+
+So I wrote `state-shift`.
+
+TL;DR -> it lets you convert your structs and methods into type-state version, without the ugly code. So, best of both worlds!
+
+If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this library is for you. `state-shift` lets you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety.
 
 
 ### What the hell is even Type-State-Pattern?
@@ -474,6 +490,33 @@ struct PlayerBuilder {
     level: Option<u8>,
     skill_slots: Option<u8>,
     spell_slots: Option<u8>,
+}
+```
+
+2. How do I pass the player to a function (no method), does it require extra type annotations to specify the state?
+
+Say you have this:
+
+```rust
+fn player_builder_logger(player_builder: PlayerBuilder) {
+    println!("PlayerBuilder's level: {:?}", player_builder.level);
+}
+```
+
+You can pass the `player_builder` without any type-annotation, but then it would expect the states to be equal to the default ones, in this case: `PlayerBuilder<Initial>`.
+
+If you want to pass another state, I think you have to explicitly tell the code:
+```rust
+fn player_builder_logger(player_builder: PlayerBuilder<LevelSet>) {
+    println!("PlayerBuilder's level: {:?}", player_builder.level);
+}
+```
+
+Then you can call it like this:
+```rust
+fn main() {
+        let player = PlayerBuilder::new().set_race(Race::Human).set_level(4);
+        player_builder_logger(player);
 }
 ```
 
