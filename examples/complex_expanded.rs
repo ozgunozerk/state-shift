@@ -19,6 +19,7 @@ enum Race {
     Human,
 }
 
+#[allow(clippy::type_complexity)]
 struct PlayerBuilder<State1 = Initial, State2 = Initial, State3 = Initial>
 where
     State1: TypeStateProtector,

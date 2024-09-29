@@ -390,6 +390,7 @@ pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
         .collect::<Vec<_>>();
 
     let output = quote! {
+        #[allow(clippy::type_complexity)]
         struct #struct_name<#(#state_idents = #default_generics),*>
         where
             #(#where_clauses),*
