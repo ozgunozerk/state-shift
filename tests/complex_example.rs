@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use state_shift::{require, states, switch_to, type_state};
 
 #[derive(Debug)]

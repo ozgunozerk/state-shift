@@ -104,11 +104,11 @@ pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
     // Generate PhantomData for the required number of states
     let phantom_data_count = remaining_args.len();
     let phantom_data: Vec<proc_macro2::TokenStream> = (0..phantom_data_count)
-        .map(|_| quote!(PhantomData))
+        .map(|_| quote!(::std::marker::PhantomData))
         .collect();
 
     let phantom_expr = if phantom_data.len() == 1 {
-        quote! { PhantomData }
+        quote! { ::std::marker::PhantomData }
     } else {
         quote! { ( #(#phantom_data),* ) }
     };
@@ -386,7 +386,7 @@ pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
     // the reason for using `fn() -> T` is to: https://github.com/ozgunozerk/state-shift/issues/1
     let phantom_fields = state_idents
         .iter()
-        .map(|ident| quote!(PhantomData<fn() -> #ident>))
+        .map(|ident| quote!(::std::marker::PhantomData<fn() -> #ident>))
         .collect::<Vec<_>>();
 
     let output = quote! {

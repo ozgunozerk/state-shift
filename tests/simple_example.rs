@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use state_shift::{require, states, switch_to, type_state};
 
 #[derive(Debug)]
@@ -98,6 +96,8 @@ impl PlayerBuilder {
 // keep in mind that you need to provide the hidden `_state` field for your methods.
 impl PlayerBuilder {
     fn my_weird_method(&self) -> Self {
+        use std::marker::PhantomData;
+
         Self {
             race: Some(Race::Human),
             level: self.level,
