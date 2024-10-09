@@ -450,7 +450,7 @@ And you know how Rust compiler is. It is very strict about types!
 >             race: Some(Race::Human),
 >             level: self.level,
 >             skill_slots: self.skill_slots,
->            _state: (PhantomData), // Don't forget this!
+>            _state: (::std::marker::PhantomData), // Don't forget this!
 >         }
 >     }
 > }
