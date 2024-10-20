@@ -15,6 +15,8 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     6. `=`
     7. `Initial` (this is the value you're interested in for default_state)
      */
+
+    // Parse the `state_slots` and `default_state` from the arguments
     let input_args: Vec<_> = args.into_iter().collect();
     let state_slots: usize = if let Some(proc_macro::TokenTree::Literal(lit)) = input_args.get(2) {
         lit.to_string().parse().unwrap()
@@ -32,6 +34,8 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     // Parse the input struct
     let input_struct = parse_macro_input!(input as ItemStruct);
     let struct_name = &input_struct.ident;
+    let generics = &input_struct.generics; // I added this line
+
     // Extract fields from the struct
     let struct_fields = match input_struct.fields {
         Fields::Named(ref fields) => &fields.named,
@@ -46,10 +50,26 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let default_generics = vec![quote!(#default_state); state_slots];
 
+    // Construct the new generics by merging original generics with state slots set to the default state
+    let original_generics = generics.params.iter();
+    let combined_generics = if generics.params.is_empty() {
+        quote! {
+            #(#state_idents = #default_generics),*
+        }
+    } else {
+        quote! {
+            #(#original_generics),*, #(#state_idents = #default_generics),*
+        }
+    };
+
+    println!("combined generics: {}", quote! {#combined_generics});
+
     let where_clauses = (0..state_slots).map(|i| {
         let state_num = Ident::new(&format!("State{}", i + 1), struct_name.span());
         quote!(#state_num: TypeStateProtector)
     });
+
+    // TODO: also append original where clause by the `where_clauses` above
 
     // Construct the `_state` field with PhantomData
     // `_state: PhantomData<fn() -> T>`
@@ -61,9 +81,9 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let output = quote! {
         #[allow(clippy::type_complexity)]
-        struct #struct_name<#(#state_idents = #default_generics),*>
+        struct #struct_name<#combined_generics>
         where
-            #(#where_clauses),*
+            #(#where_clauses),* // TODO: probably this line as well
         {
             #struct_fields
             _state: (#(#phantom_fields),*),
