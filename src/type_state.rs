@@ -62,8 +62,6 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    println!("combined generics: {}", quote! {#combined_generics});
-
     let where_clauses = (0..state_slots).map(|i| {
         let state_num = Ident::new(&format!("State{}", i + 1), struct_name.span());
         quote!(#state_num: TypeStateProtector)

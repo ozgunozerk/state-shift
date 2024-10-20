@@ -24,8 +24,8 @@ struct PlayerBuilder<'a, T> {
 #[states(Initial, RaceSet, LevelSet, ItemsSet)]
 impl<'a, T> PlayerBuilder<'a, T> {
     #[require(Initial)]
-    fn new() -> Self {
-        Self {
+    fn new() -> PlayerBuilder<'a, T> {
+        PlayerBuilder {
             race: None,
             level: None,
             items: None,
@@ -34,8 +34,8 @@ impl<'a, T> PlayerBuilder<'a, T> {
 
     #[require(Initial)]
     #[switch_to(RaceSet)]
-    fn set_race(self, race: Race) -> Self {
-        Self {
+    fn set_race(self, race: Race) -> PlayerBuilder<'a, T> {
+        PlayerBuilder {
             race: Some(race),
             level: self.level,
             items: self.items,
@@ -44,14 +44,14 @@ impl<'a, T> PlayerBuilder<'a, T> {
 
     #[require(RaceSet)]
     #[switch_to(LevelSet)]
-    fn set_level(self, level_modifier: u8) -> Self {
+    fn set_level(self, level_modifier: u8) -> PlayerBuilder<'a, T> {
         let level = match self.race {
             Some(Race::Orc) => level_modifier + 2,
             Some(Race::Human) => level_modifier,
             None => unreachable!("type safety ensures that `race` is initialized"),
         };
 
-        Self {
+        PlayerBuilder {
             race: self.race,
             level: Some(level),
             items: self.items,
@@ -60,8 +60,8 @@ impl<'a, T> PlayerBuilder<'a, T> {
 
     #[require(LevelSet)]
     #[switch_to(ItemsSet)]
-    fn set_items(self, items: Vec<&'a T>) -> Self {
-        Self {
+    fn set_items(self, items: Vec<&'a T>) -> PlayerBuilder<'a, T> {
+        PlayerBuilder {
             race: self.race,
             level: self.level,
             items: Some(items),
