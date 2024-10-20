@@ -28,22 +28,57 @@ use type_state::type_state_inner;
 
 use proc_macro::TokenStream;
 
+/// Turns your struct into type-state compatible version.
+///
+/// Usage: `#[type_state(state_slots = 3, default_state = Initial)]`
+///
+/// Arguments:
+/// - `state_slots` -> if you want to track multiple states at the same time
+/// - `default_state` -> the initial state of your struct, you must provide a one of the states defined in the `#[states]` macro
+///
+/// also protects your struct from getting initialized with random types/states
+/// by enforcing sealed-trait bounds on the states.
+#[proc_macro_attribute]
+pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
+    type_state_inner(args, input)
+}
+
+/// Denotes which states will be used for the type-state pattern.
+///
+/// Usage: `#[states(State1, State2, ...)]`
+///
+/// What it does:
+/// - defines the set of states that a type can transition between,
+/// - generates marker structs for these states
+/// - seals these traits and structs with `TypeStateProtector trait` for each state,
+/// - provides the necessary `struct_name` information to `#[require]` macro
+///
+/// Also:
+/// - consumes `#[require]` macro and does the things mentioned in `#[require]` macro's inline docs, which are:
+/// - generates a specific `impl` block for each method,
+/// - adds the required types and generics to the generated `impl` blocks,
+/// - adds the hidden `_state` field to the `Self { }` struct, so you don't have to worry about anything regarding type-state-pattern
+#[proc_macro_attribute]
+pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
+    states_inner(attr, item)
+}
+
 /// Denotes which state is required for this method to be called.
 ///
 /// Usage:
 /// - `#[require(State1)]`
 /// - or with multiple state slots: `#[require(State1, State2, ...)]`
 ///
-/// What it does:
-/// - generates a specific `impl` block for the method,
-/// - adds the required types and generics to the `impl` block,
-/// - adds the hidden `_state` field to the `Self { }` struct, so you don't have to worry about anything regarding type-state-pattern,
-/// - to be able to do all these, it needs to know the name of the struct.
+/// This macro is consumed by the `#[states]` macro, and it basically guiding `#[states]` macro to:
+/// - generate a specific `impl` block for each method,
+/// - add the required types and generics to the generated `impl` blocks,
+/// - add the hidden `_state` field to the `Self { }` struct, so you don't have to worry about anything regarding type-state-pattern
 ///
-/// To save the users of this library from having to provide
-/// the name of the struct to each `#[require]` macro,
-/// `#[states]` macro handles that for you,
-/// providing the name of the struct to the `#[require]` macro behind the scenes.
+/// hence, it is empty, because it delegates its job to `#[states]` macro
+/// the reason for that delegation is: #[require] macro needs the below from the encapsulating `impl` block for the methods
+/// - name of the impl block (name of the struct)
+/// - generics
+/// - lifetimes
 #[proc_macro_attribute]
 pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
     unreachable!()
@@ -60,38 +95,4 @@ pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn switch_to(args: TokenStream, input: TokenStream) -> TokenStream {
     switch_to_inner(args, input)
-}
-
-/// Denotes which states will be used for the type-state pattern.
-///
-/// Usage: `#[states(State1, State2, ...)]`
-///
-/// What it does:
-/// - defines the set of states that a type can transition between,
-/// - generates marker structs for these states
-/// - seals these traits and structs with `TypeStateProtector trait` for each state,
-/// - provides the necessary `struct_name` information to `#[require]` macro
-///
-/// To save the users of this library from having to provide
-/// the name of the struct to each `#[require]` macro,
-/// `#[states]` macro handles that for you,
-/// providing the name of the struct to the `#[require]` macro behind the scenes.
-#[proc_macro_attribute]
-pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
-    states_inner(attr, item)
-}
-
-/// Turns your struct into type-state compatible version.
-///
-/// Usage: `#[type_state(state_slots = 3, default_state = Initial)]`
-///
-/// Arguments:
-/// - `state_slots` -> if you want to track multiple states at the same time
-/// - `default_state` -> the initial state of your struct, you must provide a one of the states defined in the `#[states]` macro
-///
-/// also protects your struct from getting initialized with random types/states
-/// by enforcing sealed-trait bounds on the states.
-#[proc_macro_attribute]
-pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
-    type_state_inner(args, input)
 }
