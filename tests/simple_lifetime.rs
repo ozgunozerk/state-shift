@@ -119,7 +119,8 @@ mod tests {
 
     #[test]
     fn method_outside_of_macro_works() {
-        let player = PlayerBuilder::new();
+        let player: PlayerBuilder<'_, &str> = PlayerBuilder::new();
+
         let another_player = PlayerBuilder::my_weird_method(&player);
 
         assert_eq!(player.level, another_player.level);
