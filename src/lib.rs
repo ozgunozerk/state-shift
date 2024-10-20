@@ -21,7 +21,7 @@ mod states;
 mod switch_to;
 mod type_state;
 
-use require::require_inner;
+use require::{extract_require_args, generate_impl_block_for_method_based_on_require_args};
 use states::states_inner;
 use switch_to::switch_to_inner;
 use type_state::type_state_inner;
@@ -45,8 +45,8 @@ use proc_macro::TokenStream;
 /// `#[states]` macro handles that for you,
 /// providing the name of the struct to the `#[require]` macro behind the scenes.
 #[proc_macro_attribute]
-pub fn require(args: TokenStream, input: TokenStream) -> TokenStream {
-    require_inner(args, input)
+pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
+    unreachable!()
 }
 
 /// Denotes to which state will the object transition into after this method

@@ -1,27 +1,23 @@
-use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    parse::Parser, parse_macro_input, punctuated::Punctuated, Expr, Ident, ItemFn, Member, Stmt,
-    Token,
-};
+use syn::{punctuated::Punctuated, Attribute, Expr, Ident, ImplItemFn, Member, Stmt, Token};
 
-pub fn require_inner(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input arguments and function: (ImplType, State1, State2, ...)
-    let args_parser = Punctuated::<Ident, Token![,]>::parse_terminated;
-    let parsed_args = args_parser.parse(args).unwrap();
+pub fn extract_require_args(attrs: &mut Vec<Attribute>) -> Option<Punctuated<Ident, Token![,]>> {
+    let pos = attrs
+        .iter()
+        .position(|attr| attr.path().is_ident("require"))?;
+    let attr = attrs.remove(pos);
 
-    // Extract the first argument (the name of the impl block)
+    // Parse the arguments from the `#[require]` macro
+    attr.parse_args_with(Punctuated::parse_terminated).ok()
+}
 
-    let struct_name = &parsed_args[0];
-
-    // Extract the remaining arguments (states and generics)
-
-    let remaining_args: Vec<Ident> = parsed_args.iter().skip(1).cloned().collect();
-
-    let input_fn = parse_macro_input!(input as ItemFn);
-
+pub fn generate_impl_block_for_method_based_on_require_args(
+    input_fn: &mut ImplItemFn,
+    struct_name: &Ident,
+    parsed_args: &Punctuated<Ident, Token![,]>,
+) -> proc_macro2::TokenStream {
     // Only the single letter arguments will be used as generic constraints: (A, B, ...)
-    let generic_idents: Vec<proc_macro2::TokenStream> = remaining_args
+    let generic_idents: Vec<proc_macro2::TokenStream> = parsed_args
         .iter()
         .filter(|ident| is_single_letter(ident))
         .map(|ident| quote!(#ident))
@@ -29,7 +25,7 @@ pub fn require_inner(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Get the full list of arguments as a vec: (A, B, State1, ...)
     let concrete_type: Vec<proc_macro2::TokenStream> =
-        remaining_args.iter().map(|ident| quote!(#ident)).collect();
+        parsed_args.iter().map(|ident| quote!(#ident)).collect();
 
     // put the sealed trait boundary for the generics:
     /*
@@ -37,7 +33,7 @@ pub fn require_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     A: TypeStateProtector,
     B: TypeStateProtector,
      */
-    let where_clauses: Vec<proc_macro2::TokenStream> = remaining_args
+    let where_clauses: Vec<proc_macro2::TokenStream> = parsed_args
         .iter()
         .filter(|ident| is_single_letter(ident))
         .map(|ident| quote!(#ident: TypeStateProtector))
@@ -64,7 +60,7 @@ pub fn require_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         .collect();
 
     // Generate PhantomData for the required number of states
-    let phantom_data_count = remaining_args.len();
+    let phantom_data_count = parsed_args.len();
     let phantom_data: Vec<proc_macro2::TokenStream> = (0..phantom_data_count)
         .map(|_| quote!(::std::marker::PhantomData))
         .collect();
@@ -120,7 +116,7 @@ pub fn require_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    output.into()
+    output
 }
 
 fn is_single_letter(ident: &Ident) -> bool {
