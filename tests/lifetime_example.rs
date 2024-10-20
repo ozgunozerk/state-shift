@@ -1,5 +1,7 @@
 use state_shift::{states, switch_to, type_state};
 
+use std::fmt::Debug;
+
 #[derive(Debug)]
 struct Player<'a, T> {
     race: Race,
@@ -15,14 +17,20 @@ enum Race {
 }
 
 #[type_state(state_slots = 1, default_state = Initial)]
-struct PlayerBuilder<'a, T> {
+struct PlayerBuilder<'a, T>
+where
+    T: Debug,
+{
     race: Option<Race>,
     level: Option<u8>,
     items: Option<Vec<&'a T>>,
 }
 
 #[states(Initial, RaceSet, LevelSet, ItemsSet)]
-impl<'a, T> PlayerBuilder<'a, T> {
+impl<'a, T> PlayerBuilder<'a, T>
+where
+    T: Debug,
+{
     #[require(Initial)]
     fn new() -> PlayerBuilder<'a, T> {
         PlayerBuilder {
@@ -85,7 +93,10 @@ impl<'a, T> PlayerBuilder<'a, T> {
     }
 }
 
-impl<'a, T> PlayerBuilder<'a, T> {
+impl<'a, T> PlayerBuilder<'a, T>
+where
+    T: Debug,
+{
     fn my_weird_method(&self) -> Self {
         use std::marker::PhantomData;
 

@@ -52,7 +52,7 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     // Merge with the existing where clause, if any.
     let merged_where_clause = if let Some(existing_where) = &impl_generics.where_clause {
         quote! {
-            #existing_where, #(#new_where_clauses),*
+            #existing_where #(#new_where_clauses),*
         }
     } else if !new_where_clauses.is_empty() {
         quote! {

@@ -62,12 +62,24 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    let where_clauses = (0..state_slots).map(|i| {
-        let state_num = Ident::new(&format!("State{}", i + 1), struct_name.span());
-        quote!(#state_num: TypeStateProtector)
-    });
+    let where_clauses: Vec<proc_macro2::TokenStream> = (0..state_slots)
+        .map(|i| {
+            let state_num = Ident::new(&format!("State{}", i + 1), struct_name.span());
+            quote!(#state_num: TypeStateProtector)
+        })
+        .collect();
 
-    // TODO: also append original where clause by the `where_clauses` above
+    let merged_where_clause = if let Some(existing_where) = &generics.where_clause {
+        quote! {
+            #existing_where #(#where_clauses),*
+        }
+    } else if !where_clauses.is_empty() {
+        quote! {
+            where #(#where_clauses),*
+        }
+    } else {
+        quote! {}
+    };
 
     // Construct the `_state` field with PhantomData
     // `_state: PhantomData<fn() -> T>`
@@ -80,8 +92,7 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     let output = quote! {
         #[allow(clippy::type_complexity)]
         struct #struct_name<#combined_generics>
-        where
-            #(#where_clauses),* // TODO: probably this line as well
+        #merged_where_clause
         {
             #struct_fields
             _state: (#(#phantom_fields),*),

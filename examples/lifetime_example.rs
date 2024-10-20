@@ -26,7 +26,7 @@ where
     race: Option<Race>,
     level: Option<u8>,
     items: Option<Vec<&'a T>>,
-    _state: (PhantomData<fn() -> State1>),
+    _state: PhantomData<fn() -> State1>,
 }
 mod sealed {
     pub trait Sealed {}
@@ -123,7 +123,7 @@ impl<'a, T> PlayerBuilder<'a, T, ItemsSet> {
 
 fn main() {
     let player = PlayerBuilder::new()
-        .set_race(Race::Orc)
+        .set_race(Race::Human)
         .set_level(1)
         .set_items(vec![&"frostmourne"])
         .say_hi()
