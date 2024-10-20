@@ -25,8 +25,6 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     // existing generics and lifetimes
     let mut combined_generics = impl_generics.params.clone();
 
-    println!("impl_generics: {}", quote! {#combined_generics});
-
     // Append the full list of arguments from `#[require]` macro: (A, B, State1, ...)
     combined_generics.extend(parsed_args.iter().map(|ident| {
         GenericParam::Type(syn::TypeParam {
@@ -38,8 +36,6 @@ pub fn generate_impl_block_for_method_based_on_require_args(
             default: None,
         })
     }));
-
-    println!("combined_generics: {}", quote! {#combined_generics});
 
     // put the sealed trait boundary for the generics:
     /*
@@ -65,8 +61,6 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     } else {
         quote! {}
     };
-
-    println!("where_clause: {}", quote! {#merged_where_clause});
 
     // Merge the original generics with the new single-letter generics.
     let mut all_generics = impl_generics.params.clone();
@@ -120,13 +114,18 @@ pub fn generate_impl_block_for_method_based_on_require_args(
         .filter(|attr| !attr.path().is_ident("require"))
         .collect();
 
+    // Get the function name and its generics
+    let fn_name = &input_fn.sig.ident;
+    let fn_inputs = &input_fn.sig.inputs;
+    let fn_output = &input_fn.sig.output;
+
     // Generate the final output `impl` block.
     let output = quote! {
         impl<#all_generics> #struct_name<#combined_generics>
         #merged_where_clause
         {
             #(#other_attrs)*
-            fn #input_fn.sig.ident(#input_fn.sig.inputs) #input_fn.sig.output {
+            fn #fn_name(#fn_inputs) #fn_output {
                 #(#new_fn_body)*
             }
         }

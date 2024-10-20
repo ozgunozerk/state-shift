@@ -21,7 +21,6 @@ impl Parse for StatesInput {
 }
 
 pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
-    println!("AAAAAAAAA");
     // Parse the list of states from the attribute: (State1, State2, ...)
     let args = parse_macro_input!(attr as StatesInput);
 
@@ -33,8 +32,6 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         Type::Path(ref type_path) => type_path.path.segments.last().unwrap().ident.clone(),
         _ => panic!("Unsupported type for impl block"),
     };
-
-    println!("struct_name: {}", quote! {#struct_name});
 
     // Parse the generics and lifetimes associated with the impl block
     let generics = input.generics.clone();
