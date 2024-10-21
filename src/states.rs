@@ -4,8 +4,10 @@ use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
     punctuated::Punctuated,
-    Ident, ImplItem, ItemImpl, Meta, Token, Type,
+    Ident, ImplItem, ItemImpl, Token, Type,
 };
+
+use crate::{extract_require_args, generate_impl_block_for_method_based_on_require_args};
 
 struct StatesInput {
     states: Punctuated<Ident, Token![,]>,
@@ -36,27 +38,22 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     for item in input.items.iter_mut() {
         if let ImplItem::Fn(ref mut method) = item {
-            // Check if the method has a `#[require]` attribute
-            for attr in method.attrs.iter_mut() {
-                if attr.path().is_ident("require") {
-                    // Parse the tokens of the `#[require]` macro
-                    let mut args: Punctuated<Ident, Token![,]> =
-                        attr.parse_args_with(Punctuated::parse_terminated).unwrap();
+            // Extract `#[require]` arguments if they exist
+            let require_args = extract_require_args(&mut method.attrs);
 
-                    // Append the impl block type (e.g., Player) as the first argument
-                    args.insert(0, impl_type.clone());
+            // Generate the impl block for the method based on the extracted #[require] arguments
+            let modified_method = if let Some(require_args) = require_args {
+                generate_impl_block_for_method_based_on_require_args(
+                    method,
+                    &impl_type,
+                    &require_args,
+                )
+            } else {
+                quote! { #method }
+            };
 
-                    // Update the attribute tokens with the new arguments
-                    let a = match attr.meta {
-                        Meta::List(ref mut list) => list,
-                        _ => panic!("Expected a list of arguments"),
-                    };
-
-                    a.tokens = quote! { #args };
-                }
-            }
-
-            methods.push(quote! { #method });
+            // Step 3: Push the modified method to the list of methods
+            methods.push(modified_method);
         }
     }
 
