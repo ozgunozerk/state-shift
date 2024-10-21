@@ -75,7 +75,7 @@ pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// - add the hidden `_state` field to the `Self { }` struct, so you don't have to worry about anything regarding type-state-pattern
 ///
 /// hence, it is empty, because it delegates its job to `#[states]` macro
-/// the reason for that delegation is: #[require] macro needs the below from the encapsulating `impl` block for the methods
+/// the reason for that delegation is: `#[require]` macro needs the below from the encapsulating `impl` block for the methods
 /// - name of the impl block (name of the struct)
 /// - generics
 /// - lifetimes
