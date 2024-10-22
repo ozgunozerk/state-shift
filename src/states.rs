@@ -70,7 +70,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         let marker_name = Ident::new(&format!("{}", state), state.span());
 
         markers.push(quote! {
-            struct #marker_name;
+            pub struct #marker_name;
         });
 
         sealed_impls.push(quote! {
