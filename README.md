@@ -41,6 +41,46 @@ This is good, due to:
 
 # Example Usage of This Library
 
+```rust
+#[type_state(state_slots = 1, default_state = Initial)]
+struct PlayerBuilder {
+    race: Option<Race>,
+    level: Option<u8>,
+    skill_slots: Option<u8>,
+}
+
+#[states(Initial, RaceSet, LevelSet)]
+impl PlayerBuilder {
+    #[require(Initial)] // can be called only at `Initial` state.
+    #[switch_to(RaceSet)] // Transitions to `RaceSet` state
+    fn set_race(self, race: Race) -> PlayerBuilder {
+        PlayerBuilder {
+            race: Some(race),
+            level: self.level,
+            skill_slots: self.skill_slots,
+        }
+    }
+
+    #[require(RaceSet)]
+    #[switch_to(LevelSet)]
+    fn set_level(self, level_modifier: u8) -> PlayerBuilder {
+        let level = match self.race {
+            Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
+            Some(Race::Human) => level_modifier,   // humans are weak
+            None => unreachable!("type safety ensures that `race` is initialized"),
+        };
+
+        PlayerBuilder {
+            race: self.race,
+            level: Some(level),
+            skill_slots: self.skill_slots,
+        }
+    }
+
+    /* redacted */
+}
+```
+
 ### 1. State-Focused Methods
 
 Let’s say you have a `Player` struct with methods like:
@@ -53,9 +93,9 @@ As a reasonable person, you probably don’t want someone to call `die()` on a p
 > [!TIP]
 > People cannot die twice!
 
-With this library, you can ensure that your methods respect the logical state transitions, preventing awkward situations like trying to "double-die."
+With this library, you can ensure that your methods respect the logical state transitions, preventing awkward situations like trying to `player.die().die()`;
 
-This library lets you have above mentioned type-safe methods, without:
+This library lets you have above mentioned type-safe methods, *WITHOUT*:
 - duplicating your structs (one for `Dead` state and one for `Alive` state)
 - writing runtime checks
 - hurting the performance of your code
@@ -90,8 +130,9 @@ Imagine you have a `PlayerBuilder` struct designed to construct a `Player`. Some
 
 The gist of it is, some fields of the `PlayerBuilder` are depending on other fields. So we want to force the users of this library to set these fields in order by making invalid orders completely unrepresentable at compile time. Even rust-analyzer won't suggest the invalid methods as auto-completion! How wonderful is that!
 
-<details>
-    <summary><b>Show me the code!</b></summary>
+
+Below is the full example:
+
 
 ```rust
 #[derive(Debug)]
@@ -186,9 +227,7 @@ impl PlayerBuilder {
 }
 ```
 
-> If you want to see what this macro expands to, check out `examples` folder. I have both a `complex_expanded.rs` and a `simple_expanded.rs`.
-
-</details>
+If you want to see what this macro expands to, check out `examples` folder.
 
 <br/>
 <br/>
@@ -315,11 +354,11 @@ impl PlayerBuilder {
 
     pub trait TypeStateProtector: sealed::Sealed {}
 
-    struct Initial;
-    struct RaceSet;
-    struct LevelSet;
-    struct SkillSlotsSet;
-    struct SpellSlotsSet;
+    pub struct Initial;
+    pub struct RaceSet;
+    pub struct LevelSet;
+    pub struct SkillSlotsSet;
+    pub struct SpellSlotsSet;
 
     impl sealed::Sealed for Initial {}
     impl sealed::Sealed for RaceSet {}
@@ -519,5 +558,12 @@ fn main() {
         player_builder_logger(player);
 }
 ```
+
+3. Will the generics, lifetimes, and visibility of my methods and structs be preserved?
+- yes
+- yes
+- yes
+- yes
+- yes
 
 Happy coding!
