@@ -34,7 +34,8 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     // Parse the input struct
     let input_struct = parse_macro_input!(input as ItemStruct);
     let struct_name = &input_struct.ident;
-    let generics = &input_struct.generics; // I added this line
+    let generics = &input_struct.generics;
+    let visibility = &input_struct.vis;
 
     // Extract fields from the struct
     let struct_fields = match input_struct.fields {
@@ -91,7 +92,7 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let output = quote! {
         #[allow(clippy::type_complexity)]
-        struct #struct_name<#combined_generics>
+        #visibility struct #struct_name<#combined_generics>
         #merged_where_clause
         {
             #struct_fields

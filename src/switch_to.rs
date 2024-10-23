@@ -15,6 +15,7 @@ pub fn switch_to_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
     let fn_inputs = &input_fn.sig.inputs;
     let fn_body = &input_fn.block;
+    let fn_vis = &input_fn.vis;
 
     // Get the full list of arguments as a vec: (A, B, State1, ...)
     let generic_idents: Vec<proc_macro2::TokenStream> =
@@ -54,7 +55,7 @@ pub fn switch_to_inner(args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Construct the new method with the modified return type
     let output = quote! {
-        fn #fn_name(#fn_inputs) -> #modified_return_type {
+        #fn_vis fn #fn_name(#fn_inputs) -> #modified_return_type {
             #fn_body
         }
     };

@@ -118,6 +118,7 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     let fn_name = &input_fn.sig.ident;
     let fn_inputs = &input_fn.sig.inputs;
     let fn_output = &input_fn.sig.output;
+    let fn_vis = &input_fn.vis;
 
     // Generate the final output `impl` block.
     let output = quote! {
@@ -125,7 +126,7 @@ pub fn generate_impl_block_for_method_based_on_require_args(
         #merged_where_clause
         {
             #(#other_attrs)*
-            fn #fn_name(#fn_inputs) #fn_output {
+            #fn_vis fn #fn_name(#fn_inputs) #fn_output {
                 #(#new_fn_body)*
             }
         }
