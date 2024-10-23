@@ -22,7 +22,7 @@ dependencies = [
 
 [[package]]
 name = "state-shift"
-version = "0.2.1"
+version = "1.0.0"
 dependencies = [
  "proc-macro2",
  "quote",
