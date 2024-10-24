@@ -12,28 +12,29 @@ in short, a classic type-state-pattern example...
 
 State-shift helps you by:
 
-### 1. Hiding the ugly and unreadable boilerplate code required for your structs:
+## 1. Hiding the ugly and unreadable boilerplate code required for your structs:
 <br/>
 
-- without this library, you probably have to write something like this (BAD):
-    ```rust
-    struct PlayerBuilder<State1 = Initial, State2 = Initial, State3 = Initial>
-    where
-        State1: TypeStateProtector,
-        State2: TypeStateProtector,
-        State3: TypeStateProtector,
-    {
-        race: Option<Race>,
-        level: Option<u8>,
-        skill_slots: Option<u8>,
-        spell_slots: Option<u8>,
-        _state: (
-            PhantomData<State1>,
-            PhantomData<State2>,
-            PhantomData<State3>,
-        ),
-    }
-    ```
+### without state-shift, you probably have to write something like this (BAD):
+
+```rust
+struct PlayerBuilder<State1 = Initial, State2 = Initial, State3 = Initial>
+where
+    State1: TypeStateProtector,
+    State2: TypeStateProtector,
+    State3: TypeStateProtector,
+{
+    race: Option<Race>,
+    level: Option<u8>,
+    skill_slots: Option<u8>,
+    spell_slots: Option<u8>,
+    _state: (
+        PhantomData<State1>,
+        PhantomData<State2>,
+        PhantomData<State3>,
+    ),
+}
+```
 
 > [!CAUTION]
 > The above code might suck the enjoyment out of writing Rust code.
@@ -41,68 +42,71 @@ State-shift helps you by:
 <br/>
 <br/>
 
-- with this library, you can write this (GOOD):
-    ```rust
-    #[type_state(state_slots = 3, default_state = Initial)]
-    struct PlayerBuilder {
-        race: Option<Race>,
-        level: Option<u8>,
-        skill_slots: Option<u8>,
-        spell_slots: Option<u8>,
-    }
-    ```
+### with state-shift, you can write this (GOOD):
+
+```rust
+#[type_state(state_slots = 3, default_state = Initial)]
+struct PlayerBuilder {
+    race: Option<Race>,
+    level: Option<u8>,
+    skill_slots: Option<u8>,
+    spell_slots: Option<u8>,
+}
+```
 
 > [!TIP]
 > Mmmhh! Much better, right?
 
 <br/>
 
-### 2. Hiding the ugly and unreadable boilerplate code required for your impl blocks:
+## 2. Hiding the ugly and unreadable boilerplate code required for your impl blocks:
 
 <br/>
 
-- without this library, you probably have to write something like this (BAD):
+### without state-shift, you probably have to write something like this (BAD):
 
-    ```rust
-    impl<B, C> PlayerBuilder<Initial, B, C>
-    where
-        B: TypeStateProtector,
-        C: TypeStateProtector,
-    {
-        fn set_race(self, race: Race) -> PlayerBuilder<RaceSet, B, C> {
+```rust
+impl<B, C> PlayerBuilder<Initial, B, C>
+where
+    B: TypeStateProtector,
+    C: TypeStateProtector,
+{
+    fn set_race(self, race: Race) -> PlayerBuilder<RaceSet, B, C> {
+        {
             {
-                {
-                    PlayerBuilder {
-                        race: Some(race),
-                        level: self.level,
-                        skill_slots: self.skill_slots,
-                        spell_slots: self.spell_slots,
-                        _state: (PhantomData, PhantomData, PhantomData),
-                    }
+                PlayerBuilder {
+                    race: Some(race),
+                    level: self.level,
+                    skill_slots: self.skill_slots,
+                    spell_slots: self.spell_slots,
+                    _state: (PhantomData, PhantomData, PhantomData),
                 }
             }
         }
     }
-    ```
+}
+```
+
 > [!CAUTION]
 > It's not immediately obvious what's going on here, which state is required, to which state it's transitioning into, etc.
 
 <br/>
 <br/>
 
-- with this library, you can write this (GOOD):
-    ```rust
-    #[require(Initial, B, C)]
-    #[switch_to(RaceSet, B, C)]
-    fn set_race(self, race: Race) -> PlayerBuilder {
-        PlayerBuilder {
-            race: Some(race),
-            level: self.level,
-            skill_slots: self.skill_slots,
-            spell_slots: self.spell_slots,
-        }
+### with state-shift, you can write this (GOOD):
+
+```rust
+#[require(Initial, B, C)]
+#[switch_to(RaceSet, B, C)]
+fn set_race(self, race: Race) -> PlayerBuilder {
+    PlayerBuilder {
+        race: Some(race),
+        level: self.level,
+        skill_slots: self.skill_slots,
+        spell_slots: self.spell_slots,
     }
-    ```
+}
+```
 
 > [!TIP]
 > Immediately signals:
@@ -116,11 +120,11 @@ State-shift helps you by:
 <br/>
 <br/>
 
-### 3. Hiding the ugly and unreadable boilerplate code required for intermediate traits and structs:
+## 3. Hiding the ugly and unreadable boilerplate code required for intermediate traits and structs:
 
 <br/>
 
-- without this library, in order to ensure the type-safety, you have to write traits and unit structs (BAD):
+### without state-shift, in order to ensure the type-safety, you have to write traits and unit structs (BAD):
     ```rust
     mod sealed {
         pub trait Sealed {}
@@ -154,13 +158,14 @@ State-shift helps you by:
 <br/>
 
 
-- with this library, you can write this (GOOD):
-    ```rust
-    #[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
-    impl PlayerBuilder {
-        // ...methods redacted...
-    }
-    ```
+### with state-shift, you can write this (GOOD):
+
+```rust
+#[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
+impl PlayerBuilder {
+    // ...methods redacted...
+}
+```
 
 > [!TIP]
 > The necessary states that we want to use, cannot be more clear!
