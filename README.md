@@ -4,28 +4,8 @@ state-shift let's you convert your structs and methods into type-state version, 
 
 If `type-state-pattern` didn't sound familiar, scroll to [What the hell is even Type-State-Pattern?](#what-the-hell-is-even-type-state-pattern)
 
-<table>
-<tr>
-<th align="center">
-<img width="441" height="1px">
-<p>
-<small>
-Without state-shift
-</small>
-</p>
-</th>
-<th align="center">
-<img width="441" height="1">
-<p>
-<small>
-With state-shift
-</small>
-</p>
-</th>
-</tr>
-<tr>
-<td>
 
+Type-State `PlayerBuilder` example WITHOUT state-shift:
 ```rust
 use std::marker::PhantomData;
 
@@ -159,9 +139,7 @@ fn main() {
 }
 ```
 
-</td>
-<td>
-
+Type-State `PlayerBuilder` example WITH state-shift:
 ```rust
 use state_shift::{states, switch_to, type_state};
 
@@ -270,24 +248,6 @@ fn main() {
     println!("Skill slots: {}", player.skill_slots);
 }
 ```
-
-</td>
-</tr>
-<tr>
-<td align="center">
-Column 1
-</td>
-<td align="center">
-Column 2
-</td>
-</tr>
-</table>
-
-Type-State `PlayerBuilder` example WITHOUT state-shift:
-
-
-Type-State `PlayerBuilder` example WITH state-shift:
-
 
 
 # But why?
