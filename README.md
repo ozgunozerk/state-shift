@@ -4,491 +4,15 @@ state-shift let's you convert your structs and methods into type-state version, 
 
 If `type-state-pattern` didn't sound familiar, scroll to [What the hell is even Type-State-Pattern?](#what-the-hell-is-even-type-state-pattern)
 
+Say, you want to build a player, and you want the following:
+- some fields needs to be set before the others
+- there are multiple states that you want to track at simultaneously
 
-Type-State `PlayerBuilder` example WITHOUT state-shift:
-```rust
-use std::marker::PhantomData;
+in short, a classic type-state-pattern example...
 
-#[derive(Debug)]
-struct Player {
-    race: Race,
-    level: u8,
-    skill_slots: u8,
-}
+State-shift helps you by:
 
-#[derive(Debug, PartialEq)]
-enum Race {
-    Orc,
-    #[allow(unused)]
-    Human,
-}
-
-struct PlayerBuilder<State1 = Initial> {
-    race: Option<Race>,
-    level: Option<u8>,
-    skill_slots: Option<u8>,
-    _state: PhantomData<fn() -> State1>,
-}
-
-mod sealed {
-    pub trait Sealed {}
-}
-
-pub trait TypeStateProtector: sealed::Sealed {}
-
-struct Initial;
-struct RaceSet;
-struct LevelSet;
-struct SkillSlotsSet;
-
-impl sealed::Sealed for Initial {}
-impl sealed::Sealed for RaceSet {}
-impl sealed::Sealed for LevelSet {}
-impl sealed::Sealed for SkillSlotsSet {}
-
-impl TypeStateProtector for Initial {}
-impl TypeStateProtector for RaceSet {}
-impl TypeStateProtector for LevelSet {}
-impl TypeStateProtector for SkillSlotsSet {}
-
-// put the constructors in a separate impl block
-impl PlayerBuilder<Initial> {
-    fn new() -> Self {
-        PlayerBuilder {
-            race: None,
-            level: None,
-            skill_slots: None,
-            _state: (PhantomData),
-        }
-    }
-}
-
-impl PlayerBuilder<Initial> {
-    fn set_race(self, race: Race) -> PlayerBuilder<RaceSet> {
-        PlayerBuilder {
-            race: Some(race),
-            level: self.level,
-            skill_slots: self.skill_slots,
-            _state: (PhantomData),
-        }
-    }
-}
-impl PlayerBuilder<RaceSet> {
-    fn set_level(self, level_modifier: u8) -> PlayerBuilder<LevelSet> {
-        let level = match self.race {
-            Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
-            Some(Race::Human) => level_modifier,   // humans are weak
-            None => unreachable!("type safety ensures that `race` is initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: Some(level),
-            skill_slots: self.skill_slots,
-            _state: (PhantomData),
-        }
-    }
-}
-impl PlayerBuilder<LevelSet> {
-    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder<SkillSlotsSet> {
-        let skill_slots = match self.race {
-            Some(Race::Orc) => skill_slot_modifier,
-            Some(Race::Human) => skill_slot_modifier + 1, // Human's have +1 skill slot advantage
-            None => unreachable!("type safety ensures that `race` should be initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: self.level,
-            skill_slots: Some(skill_slots),
-            _state: (PhantomData),
-        }
-    }
-}
-impl<A> PlayerBuilder<A>
-where
-    A: TypeStateProtector,
-{
-    fn say_hi(self) -> Self {
-        println!("Hi!");
-
-        self
-    }
-}
-impl PlayerBuilder<SkillSlotsSet> {
-    fn build(self) -> Player {
-        Player {
-            race: self.race.expect("type safety ensures this is set"),
-            level: self.level.expect("type safety ensures this is set"),
-            skill_slots: self.skill_slots.expect("type safety ensures this is set"),
-        }
-    }
-}
-
-fn main() {
-    let player = PlayerBuilder::new()
-        .set_race(Race::Orc)
-        .set_level(1)
-        .set_skill_slots(1)
-        .say_hi()
-        .build();
-
-    println!("Race: {:?}", player.race);
-    println!("Level: {}", player.level);
-    println!("Skill slots: {}", player.skill_slots);
-}
-```
-
-Type-State `PlayerBuilder` example WITH state-shift:
-```rust
-use state_shift::{states, switch_to, type_state};
-
-#[derive(Debug)]
-struct Player {
-    race: Race,
-    level: u8,
-    skill_slots: u8,
-}
-
-#[derive(Debug, PartialEq)]
-enum Race {
-    #[allow(unused)]
-    Orc,
-    Human,
-}
-
-#[type_state(state_slots = 1, default_state = Initial)]
-struct PlayerBuilder {
-    race: Option<Race>,
-    level: Option<u8>,
-    skill_slots: Option<u8>,
-}
-
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
-impl PlayerBuilder {
-    #[require(Initial)] // require the default state for the constructor
-    fn new() -> PlayerBuilder {
-        PlayerBuilder {
-            race: None,
-            level: None,
-            skill_slots: None,
-        }
-    }
-
-    #[require(Initial)] // can be called only at `Initial` state.
-    #[switch_to(RaceSet)] // Transitions to `RaceSet` state
-    fn set_race(self, race: Race) -> PlayerBuilder {
-        PlayerBuilder {
-            race: Some(race),
-            level: self.level,
-            skill_slots: self.skill_slots,
-        }
-    }
-
-    #[require(RaceSet)]
-    #[switch_to(LevelSet)]
-    fn set_level(self, level_modifier: u8) -> PlayerBuilder {
-        let level = match self.race {
-            Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
-            Some(Race::Human) => level_modifier,   // humans are weak
-            None => unreachable!("type safety ensures that `race` is initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: Some(level),
-            skill_slots: self.skill_slots,
-        }
-    }
-
-    #[require(LevelSet)]
-    #[switch_to(SkillSlotsSet)]
-    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder {
-        let skill_slots = match self.race {
-            Some(Race::Orc) => skill_slot_modifier,
-            Some(Race::Human) => skill_slot_modifier + 1, // Human's have +1 skill slot advantage
-            None => unreachable!("type safety ensures that `race` should be initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: self.level,
-            skill_slots: Some(skill_slots),
-        }
-    }
-
-    /// doesn't require any state, so this is available at any state
-    #[require(A)]
-    fn say_hi(self) -> Self {
-        println!("Hi!");
-
-        self
-    }
-
-    #[require(SkillSlotsSet)]
-    fn build(self) -> Player {
-        Player {
-            race: self.race.expect("type safety ensures this is set"),
-            level: self.level.expect("type safety ensures this is set"),
-            skill_slots: self.skill_slots.expect("type safety ensures this is set"),
-        }
-    }
-}
-
-fn main() {
-    let player = PlayerBuilder::new()
-        .set_race(Race::Orc)
-        .set_level(1)
-        .set_skill_slots(1)
-        .say_hi()
-        .build();
-
-    println!("Race: {:?}", player.race);
-    println!("Level: {}", player.level);
-    println!("Skill slots: {}", player.skill_slots);
-}
-```
-
-
-# But why?
-
-I love type-state pattern's promises:
-
-- compile time checks
-
-- better/safer auto completion suggestions by your IDE
-
-- no additional runtime costs
-
-However, I agree that in order to utilize type-state pattern, the code has to become quite ugly. We are talking about less readable and maintainable code, just because of this.
-
-Although I'm a fan, I agree usually it's not a good idea to use type-state pattern.
-
-And THAT, my friends, bothered me...
-
-So I wrote `state-shift`.
-
-TL;DR -> it lets you convert your structs and methods into type-state version, without the ugly code. So, best of both worlds!
-
-If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this library is for you. `state-shift` lets you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety.
-
-
-## What the hell is even Type-State-Pattern?
-
-Here is a great blog post that explains it, I heard that the author is a good person: https://cryptical.xyz/rust/type-state-pattern
-
-TL;DR -> instead of relying on runtime checks, Type-State-Pattern uses type-safety to enforce specific methods are only callable at specific states at compile time.
-
-For example, you cannot call `fight()` method on a `Player` struct when it is in `Dead` state. You normally accomplish this by introducing boolean flags and runtime checks. With Type-State-Pattern, you achieve this without any runtime checks, purely by the type-safety provided by Rust primitives.
-
-This is good, due to:
-- better DevX (users of the library won't be even able to call this invalid methods)
-- less runtime bugs
-- less runtime checks -> more performant code
-- zero-cost abstractions for this type checks (no additional performance cost of doing this)
-
-<br/>
-
-# Example Usage of This Library
-
-```rust
-#[type_state(state_slots = 1, default_state = Initial)]
-struct PlayerBuilder {
-    race: Option<Race>,
-    level: Option<u8>,
-    skill_slots: Option<u8>,
-}
-
-#[states(Initial, RaceSet, LevelSet)]
-impl PlayerBuilder {
-    #[require(Initial)] // can be called only at `Initial` state.
-    #[switch_to(RaceSet)] // Transitions to `RaceSet` state
-    fn set_race(self, race: Race) -> PlayerBuilder {
-        PlayerBuilder {
-            race: Some(race),
-            level: self.level,
-            skill_slots: self.skill_slots,
-        }
-    }
-
-    #[require(RaceSet)]
-    #[switch_to(LevelSet)]
-    fn set_level(self, level_modifier: u8) -> PlayerBuilder {
-        let level = match self.race {
-            Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
-            Some(Race::Human) => level_modifier,   // humans are weak
-            None => unreachable!("type safety ensures that `race` is initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: Some(level),
-            skill_slots: self.skill_slots,
-        }
-    }
-
-    /* redacted */
-}
-```
-
-### 1. State-Focused Methods
-
-Let’s say you have a `Player` struct with methods like:
-
-- `die()`
-- `resurrect()`
-
-As a reasonable person, you probably don’t want someone to call `die()` on a player who’s already `Dead`.
-
-> [!TIP]
-> People cannot die twice!
-
-With this library, you can ensure that your methods respect the logical state transitions, preventing awkward situations like trying to `player.die().die()`;
-
-This library lets you have above mentioned type-safe methods, *WITHOUT*:
-- duplicating your structs (one for `Dead` state and one for `Alive` state)
-- writing runtime checks
-- hurting the performance of your code
-- making your code horrible to look at due to infamous Type-State-Pattern
-
-In short, the users of this library won't be able to call:
-
-> [!CAUTION]
-> ```rust
-> let player = PlayerBuilder::new().die().die(); // ❌ Invalid!
-> ```
-> The good thing is, after calling the first `die()` method, the second `die()` **won't be even suggested** by your IDE via autocomplete.
->
-> And even if you insist to type it anyway, it will be a compile-time error!
-
-
-### 2. Field/Method Order & Dependencies
-
-Imagine you have a `PlayerBuilder` struct designed to construct a `Player`. Some fields need to be set before others because of logical dependencies. For instance, the `race` field must be specified before the `level` field, as the race affects how we calculate the player's starting level.
-
-> [!CAUTION]
->  So, we don't want the below code:
->```rust
->let player = PlayerBuilder::new().level(10) // ❌ Invalid!
->```
-
-> [!TIP]
->  We want the below code:
->```rust
->let player = PlayerBuilder::new().race(Race::Human).level(10) // ✅
->```
-
-The gist of it is, some fields of the `PlayerBuilder` are depending on other fields. So we want to force the users of this library to set these fields in order by making invalid orders completely unrepresentable at compile time. Even rust-analyzer won't suggest the invalid methods as auto-completion! How wonderful is that!
-
-
-Below is the full example:
-
-
-```rust
-#[derive(Debug)]
-struct Player {
-    race: Race,
-    level: u8,
-    skill_slots: u8,
-}
-
-#[derive(Debug, PartialEq)]
-enum Race {
-    #[allow(unused)]
-    Orc,
-    Human,
-}
-
-#[type_state(state_slots = 1, default_state = Initial)]
-struct PlayerBuilder {
-    race: Option<Race>,
-    level: Option<u8>,
-    skill_slots: Option<u8>,
-}
-
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
-impl PlayerBuilder {
-    #[require(Initial)] // can be called only at `Initial` state, and doesn't switch to a new state
-    fn new() -> PlayerBuilder {
-        PlayerBuilder {
-            race: None,
-            level: None,
-            skill_slots: None,
-        }
-    }
-
-    #[require(Initial)] // can be called only at `Initial` state.
-    #[switch_to(RaceSet)] // Transitions to `RaceSet` state
-    fn set_race(self, race: Race) -> PlayerBuilder {
-        PlayerBuilder {
-            race: Some(race),
-            level: self.level,
-            skill_slots: self.skill_slots,
-        }
-    }
-
-    #[require(RaceSet)]
-    #[switch_to(LevelSet)]
-    fn set_level(self, level_modifier: u8) -> PlayerBuilder {
-        let level = match self.race {
-            Some(Race::Orc) => level_modifier + 2, // Orc's have +2 level advantage
-            Some(Race::Human) => level_modifier,   // humans are weak
-            None => unreachable!("type safety ensures that `race` is initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: Some(level),
-            skill_slots: self.skill_slots,
-        }
-    }
-
-    #[require(LevelSet)]
-    #[switch_to(SkillSlotsSet)]
-    fn set_skill_slots(self, skill_slot_modifier: u8) -> PlayerBuilder {
-        let skill_slots = match self.race {
-            Some(Race::Orc) => skill_slot_modifier,
-            Some(Race::Human) => skill_slot_modifier + 1, // Human's have +1 skill slot advantage
-            None => unreachable!("type safety ensures that `race` should be initialized"),
-        };
-
-        PlayerBuilder {
-            race: self.race,
-            level: self.level,
-            skill_slots: Some(skill_slots),
-        }
-    }
-
-    #[require(A)] /// doesn't require any state, so this is available at any state
-    fn say_hi(self) -> Self {
-        println!("Hi!");
-
-        self
-    }
-
-    #[require(SkillSlotsSet)]
-    fn build(self) -> Player {
-        Player {
-            race: self.race.expect("type safety ensures this is set"),
-            level: self.level.expect("type safety ensures this is set"),
-            skill_slots: self.skill_slots.expect("type safety ensures this is set"),
-        }
-    }
-}
-```
-
-If you want to see what this macro expands to, check out `examples` folder.
-
-<br/>
-<br/>
-
-# Benefits of using this Library
-
-### 1. You get type-safety for your methods, without any runtime checks
-
-<br/>
-
-### 2. Hiding the ugly and unreadable boilerplate code required for your structs:
+### 1. Hiding the ugly and unreadable boilerplate code required for your structs:
 <br/>
 
 - without this library, you probably have to write something like this (BAD):
@@ -533,7 +57,7 @@ If you want to see what this macro expands to, check out `examples` folder.
 
 <br/>
 
-### 3. Hiding the  ugly and unreadable boilerplate code required for your impl blocks:
+### 2. Hiding the ugly and unreadable boilerplate code required for your impl blocks:
 
 <br/>
 
@@ -592,7 +116,7 @@ If you want to see what this macro expands to, check out `examples` folder.
 <br/>
 <br/>
 
-### 4. Hiding the ugly and unreadable boilerplate code required for intermediate traits and structs:
+### 3. Hiding the ugly and unreadable boilerplate code required for intermediate traits and structs:
 
 <br/>
 
@@ -643,20 +167,121 @@ If you want to see what this macro expands to, check out `examples` folder.
 
 <br/>
 
-### 5. Sealed-traits
+
+# Tell me more
+
+I love type-state pattern's promises:
+
+- compile time checks
+
+- better/safer auto completion suggestions by your IDE
+
+- no additional runtime costs
+
+However, I agree that in order to utilize type-state pattern, the code has to become quite ugly. We are talking about less readable and maintainable code, just because of this.
+
+Although I'm a fan, I agree usually it's not a good idea to use type-state pattern.
+
+And THAT, my friends, bothered me...
+
+So I wrote `state-shift`.
+
+TL;DR -> it lets you convert your structs and methods into type-state version, without the ugly code. So, best of both worlds!
+
+If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this library is for you. `state-shift` lets you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety.
+
+
+## What the hell is even Type-State-Pattern?
+
+Here is a great blog post that explains it, I heard that the author is a good person: https://cryptical.xyz/rust/type-state-pattern
+
+TL;DR -> instead of relying on runtime checks, Type-State-Pattern uses type-safety to enforce specific methods are only callable at specific states at compile time.
+
+For example, you cannot call `fight()` method on a `Player` struct when it is in `Dead` state. You normally accomplish this by introducing boolean flags and runtime checks. With Type-State-Pattern, you achieve this without any runtime checks, purely by the type-safety provided by Rust primitives.
+
+This is good, due to:
+- better DevX (users of the library won't be even able to call this invalid methods)
+- less runtime bugs
+- less runtime checks -> more performant code
+- zero-cost abstractions for this type checks (no additional performance cost of doing this)
+
+<br/>
+
+# Why you should use any of these?
+
+### 1. State-Focused Methods
+
+Let’s say you have a `Player` struct with methods like:
+
+- `die()`
+- `resurrect()`
+
+As a reasonable person, you probably don’t want someone to call `die()` on a player who’s already `Dead`.
+
+> [!TIP]
+> People cannot die twice!
+
+With this library, you can ensure that your methods respect the logical state transitions, preventing awkward situations like trying to `player.die().die()`;
+
+This library lets you have above mentioned type-safe methods, *WITHOUT*:
+- duplicating your structs (one for `Dead` state and one for `Alive` state)
+- writing runtime checks
+- hurting the performance of your code
+- making your code horrible to look at due to infamous Type-State-Pattern
+
+In short, the users of this library won't be able to call:
+
+> [!CAUTION]
+> ```rust
+> let player = PlayerBuilder::new().die().die(); // ❌ Invalid!
+> ```
+> The good thing is, after calling the first `die()` method, the second `die()` **won't be even suggested** by your IDE via autocomplete.
+>
+> And even if you insist to type it anyway, it will be a compile-time error!
+
+
+### 2. Field/Method Order & Dependencies
+
+Imagine you have a `PlayerBuilder` struct designed to construct a `Player`. Some fields need to be set before others because of logical dependencies. For instance, the `race` field must be specified before the `level` field, as the race affects how we calculate the player's starting level.
+
+> [!CAUTION]
+>  So, we don't want the below code:
+>```rust
+>let player = PlayerBuilder::new().level(10) // ❌ Invalid!
+>```
+
+> [!TIP]
+>  We want the below code:
+>```rust
+>let player = PlayerBuilder::new().race(Race::Human).level(10) // ✅
+>```
+
+The gist of it is, some fields of the `PlayerBuilder` are depending on other fields. So we want to force the users of this library to set these fields in order by making invalid orders completely unrepresentable at compile time. Even rust-analyzer won't suggest the invalid methods as auto-completion! How wonderful is that!
+
+<br/>
+<br/>
+
+# Additional benefits of using this Library
+
+### 1. You get type-safety for your methods, with concise and clear syntax
+
+<br/>
+
+
+### 2. Sealed-traits
 
 this library also uses sealed-traits to ensure even more safety! And again, you don't need to worry about anything. Sealed-traits basically ensure that the user cannot implement these trait themselves. So, your structs are super-safe!
 
 <br/>
 
 
-### 6. Clear documentation
+### 3. Clear documentation
 
 I tried to document nearly everything. If you are curios on what the macros do under the hood, even those macros are documented! Just check the inline documentation and I'm sure you will understand what's going on in a blink of an eye!
 
 <br/>
 
-### 7. Suggestions and contributions are welcome!
+### 4. Suggestions and contributions are welcome!
 
 I'm a quite friendly guy. Don't hesitate to open an issue or a pull request if you have any suggestions or if you want to contribute! Just keep in mind that everyone contributing to here (including myself) are doing it voluntarily. So, always be respectful and appreciate other's time and effort.
 
