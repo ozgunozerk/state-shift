@@ -2,7 +2,7 @@
 
 state-shift let's you convert your structs and methods into type-state version, without the ugly code.
 
-If `type-state-pattern` didn't sound familiar, scroll to [What the hell is even Type-State-Pattern?](### What the hell is even Type-State-Pattern?)
+If `type-state-pattern` didn't sound familiar, scroll to [What the hell is even Type-State-Pattern?](#type-state-pattern)
 
 
 
@@ -29,7 +29,7 @@ TL;DR -> it lets you convert your structs and methods into type-state version, w
 If you don't appreciate all the boilerplate code required by Type-State-Pattern that makes the DevX worse, but you still like the idea of type-safety provided by it, this library is for you. `state-shift` lets you write your code as if type-state-pattern was not there, yet grants you the benefits of type-safety.
 
 
-### What the hell is even Type-State-Pattern?
+## [What the hell is even Type-State-Pattern?](#type-state-pattern)
 
 Here is a great blog post that explains it, I heard that the author is a good person: https://cryptical.xyz/rust/type-state-pattern
 
