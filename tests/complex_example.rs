@@ -23,9 +23,6 @@ struct PlayerBuilder {
     spell_slots: Option<u8>,
 }
 
-// put the constructors in a separate impl block
-impl PlayerBuilder {}
-
 #[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
 impl PlayerBuilder {
     #[require(Initial, Initial, Initial)] // require the default state for the constructor

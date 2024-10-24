@@ -61,7 +61,6 @@ impl TypeStateProtector for LevelSet {}
 impl TypeStateProtector for SkillSlotsSet {}
 impl TypeStateProtector for SpellSlotsSet {}
 
-// put the constructors in a separate impl block
 impl PlayerBuilder<Initial, Initial, Initial> {
     fn new() -> Self {
         PlayerBuilder {
