@@ -701,7 +701,7 @@ fn main() {
 }
 ```
 
-3. Will the generics, lifetimes, and visibility of my methods and structs be preserved?
+### 3. Will the generics, lifetimes, and visibility of my methods and structs be preserved?
 - yes
 - yes
 - yes
