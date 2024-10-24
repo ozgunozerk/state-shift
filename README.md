@@ -1,6 +1,12 @@
+# With and Without State-Shift
+
+state-shift let's you convert your structs and methods into type-state version, without the ugly code.
+
+If `type-state-pattern` didn't sound familiar, scroll to [What the hell is even Type-State-Pattern?](### What the hell is even Type-State-Pattern?)
 
 
-# What is State-Shift?
+
+# But what is State-Shift?
 
 I love type-state pattern's promises:
 
