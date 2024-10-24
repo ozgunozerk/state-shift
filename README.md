@@ -298,8 +298,8 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
     }
     ```
 
-    > [!CAUTION]
-    > The above code might suck the enjoyment out of writing Rust code.
+> [!CAUTION]
+> The above code might suck the enjoyment out of writing Rust code.
 
 <br/>
 <br/>
@@ -315,8 +315,8 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
     }
     ```
 
-    > [!TIP]
-    > Mmmhh! Much better, right?
+> [!TIP]
+> Mmmhh! Much better, right?
 
 <br/>
 
@@ -348,8 +348,8 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
     }
     ```
 
-    > [!CAUTION]
-    > It's not immediately obvious what's going on here, which state is required, to which state it's transitioning into, etc.
+> [!CAUTION]
+> It's not immediately obvious what's going on here, which state is required, to which state it's transitioning into, etc.
 
 <br/>
 <br/>
@@ -368,14 +368,14 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
     }
     ```
 
-    > [!TIP]
-    > Immediately signals:
-    >
-    > - which state is required.
-    >
-    > - to which state it's transitioning into.
-    >
-    > No weird generics and intermediate unit structs that hurting your brain.
+> [!TIP]
+> Immediately signals:
+>
+> - which state is required.
+>
+> - to which state it's transitioning into.
+>
+> No weird generics and intermediate unit structs that hurting your brain.
 
 <br/>
 <br/>
@@ -411,8 +411,8 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
     impl TypeStateProtector for SpellSlotsSet {}
     ```
 
-    > [!CAUTION]
-    > EWWWW
+> [!CAUTION]
+> EWWWW
 
 <br/>
 <br/>
@@ -426,8 +426,8 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
     }
     ```
 
-    > [!TIP]
-    > The necessary states that we want to use, cannot be more clear!
+> [!TIP]
+> The necessary states that we want to use, cannot be more clear!
 
 <br/>
 
