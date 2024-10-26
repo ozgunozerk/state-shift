@@ -708,4 +708,12 @@ fn main() {
 - yes
 - yes
 
+### 4. Can I use `async` or `const` methods?
+- YES!
+
+### 5. Can I use `Result<MyStruct>` or `Option<MyStruct>` or similar complex types in my methods?
+- you can use them in the return type!
+- you can use them in the body!
+- basically, yes!
+
 Happy coding!

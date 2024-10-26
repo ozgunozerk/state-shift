@@ -1,4 +1,4 @@
-use state_shift::{states, switch_to, type_state};
+use state_shift::{states, type_state};
 
 use std::fmt::Debug;
 
@@ -76,6 +76,33 @@ where
         }
     }
 
+    #[require(LevelSet)]
+    #[switch_to(ItemsSet)]
+    fn set_different_type_items<'b, Q>(self, items: Vec<&'b Q>) -> PlayerBuilder<'b, Q>
+    where
+        Q: Debug,
+    {
+        PlayerBuilder {
+            race: self.race,
+            level: self.level,
+            items: Some(items),
+        }
+    }
+
+    #[require(LevelSet)]
+    #[switch_to(ItemsSet)]
+    fn set_items_might_fail(self, items: Vec<&'a T>) -> Option<PlayerBuilder<'a, T>> {
+        if items.is_empty() {
+            return None;
+        }
+
+        Some(PlayerBuilder {
+            race: self.race,
+            level: self.level,
+            items: Some(items),
+        })
+    }
+
     #[require(A)]
     fn say_hi(self) -> Self {
         println!("Hi!");
@@ -126,6 +153,40 @@ mod tests {
         assert_eq!(player.race, Race::Human);
         assert_eq!(player.level, 10);
         assert_eq!(player.items, vec![&"Sword", &"Shield"]);
+    }
+
+    #[test]
+    fn different_type_items_works() {
+        let items = vec![&"Sword", &"Shield"];
+        let player = PlayerBuilder::<String>::new()
+            .set_race(Race::Human)
+            .set_level(10)
+            .set_different_type_items(items)
+            .say_hi()
+            .build();
+
+        assert_eq!(player.race, Race::Human);
+        assert_eq!(player.level, 10);
+        assert_eq!(player.items, vec![&"Sword", &"Shield"]);
+    }
+
+    #[test]
+    fn set_items_might_fail_works() {
+        let items = vec![&"Sword", &"Shield"];
+        let player = PlayerBuilder::new()
+            .set_race(Race::Human)
+            .set_level(10)
+            .set_items_might_fail(items);
+
+        assert!(player.is_some());
+
+        let items = vec![];
+        let player = PlayerBuilder::<String>::new()
+            .set_race(Race::Human)
+            .set_level(10)
+            .set_items_might_fail(items);
+
+        assert!(player.is_none());
     }
 
     #[test]

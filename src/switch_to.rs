@@ -1,64 +1,81 @@
-use proc_macro::TokenStream;
-use quote::quote;
-use syn::{
-    parse::Parser, parse_macro_input, punctuated::Punctuated, Ident, ItemFn, PathArguments,
-    ReturnType, Token, Type,
-};
+use syn::{punctuated::Punctuated, Ident, PathArguments, ReturnType, Token, Type, TypePath};
 
-pub fn switch_to_inner(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input arguments and function: (State1, State2, ...)
-    let args_parser = Punctuated::<Ident, Token![,]>::parse_terminated;
-    let parsed_args = args_parser.parse(args).unwrap();
-    let input_fn = parse_macro_input!(input as ItemFn);
+pub fn switch_to_inner(
+    fn_output: &ReturnType,
+    parsed_args: &Punctuated<Ident, Token![,]>,
+    struct_name: &Ident, // New parameter for the struct name (e.g., Player)
+) -> ReturnType {
+    let generic_idents: Vec<syn::GenericArgument> = parsed_args
+        .iter()
+        .map(|i| {
+            syn::GenericArgument::Type(Type::Path(TypePath {
+                qself: None,
+                path: i.clone().into(),
+            }))
+        })
+        .collect();
 
-    // Get the function name, inputs, and body
-    let fn_name = &input_fn.sig.ident;
-    let fn_inputs = &input_fn.sig.inputs;
-    let fn_body = &input_fn.block;
-    let fn_vis = &input_fn.vis;
-
-    // Get the full list of arguments as a vec: (A, B, State1, ...)
-    let generic_idents: Vec<proc_macro2::TokenStream> =
-        parsed_args.iter().map(|i| quote!(#i)).collect();
-
-    // Parse the original return type from the function signature
-    let original_return_type = match &input_fn.sig.output {
+    let original_return_type = match &fn_output {
         ReturnType::Type(_, ty) => &**ty,
         _ => panic!("Expected a return type."),
     };
 
-    // Check if the original return type has angle brackets for generics
-    let modified_return_type = match original_return_type {
-        Type::Path(type_path) => {
-            // Extract the type path without generics (e.g., PlayerBuilder).
-            let type_name = &type_path.path.segments.last().unwrap().ident;
+    let mut modified_return_type = original_return_type.clone();
 
-            match &type_path.path.segments.last().unwrap().arguments {
-                PathArguments::AngleBracketed(arguments) => {
-                    // Extract existing generics.
-                    let existing_generics = &arguments.args;
-                    quote! {
-                        #type_name<#existing_generics, #(#generic_idents),*>
+    // Recursively modify the return type, using the struct_name to match
+    recursively_modify_return_type(&mut modified_return_type, generic_idents, struct_name);
+
+    ReturnType::Type(Default::default(), Box::new(modified_return_type))
+}
+
+fn recursively_modify_return_type(
+    ty: &mut Type,
+    generic_idents: Vec<syn::GenericArgument>,
+    struct_name: &Ident, // Target struct name (e.g., Player)
+) {
+    match ty {
+        Type::Path(type_path) => {
+            let last_segment = type_path.path.segments.last_mut().unwrap();
+
+            if last_segment.ident == *struct_name {
+                // Match the provided struct name (e.g., Player)
+                modify_type_path(type_path, generic_idents);
+            } else {
+                // Handle cases where it's a wrapper type like Result<Player> or Option<Player>
+                if let PathArguments::AngleBracketed(arguments) = &mut last_segment.arguments {
+                    for arg in &mut arguments.args {
+                        if let syn::GenericArgument::Type(inner_type) = arg {
+                            // Recurse into the inner type to check for Player (or any target struct)
+                            recursively_modify_return_type(
+                                inner_type,
+                                generic_idents.clone(),
+                                struct_name,
+                            );
+                        }
                     }
                 }
-                PathArguments::None => {
-                    // No existing generics, so we add ours as a new set.
-                    quote! {
-                        #type_name<#(#generic_idents),*>
-                    }
-                }
-                _ => panic!("Unsupported path arguments in return type."),
             }
         }
-        _ => panic!("Expected a return type that is a path."),
-    };
+        _ => panic!("Expected a path type."),
+    }
+}
 
-    // Construct the new method with the modified return type
-    let output = quote! {
-        #fn_vis fn #fn_name(#fn_inputs) -> #modified_return_type {
-            #fn_body
+fn modify_type_path(type_path: &mut TypePath, generic_idents: Vec<syn::GenericArgument>) {
+    let last_segment = type_path.path.segments.last_mut().unwrap();
+
+    match &mut last_segment.arguments {
+        PathArguments::AngleBracketed(arguments) => {
+            arguments.args.extend(generic_idents);
         }
-    };
-
-    output.into()
+        PathArguments::None => {
+            last_segment.arguments =
+                PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+                    args: generic_idents.into_iter().collect(),
+                    colon2_token: None,
+                    lt_token: Default::default(),
+                    gt_token: Default::default(),
+                });
+        }
+        _ => panic!("Unsupported path arguments in return type."),
+    }
 }
