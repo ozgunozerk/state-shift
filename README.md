@@ -470,7 +470,7 @@ This is good, due to:
 
 <br/>
 
-## Why you should use care about type-state?
+## Why you should care about type-state?
 
 ### 1. State-Focused Methods
 
