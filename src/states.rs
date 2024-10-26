@@ -33,8 +33,12 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         _ => panic!("Unsupported type for impl block"),
     };
 
-    // Parse the generics and lifetimes associated with the impl block
-    let generics = input.generics.clone();
+    // Generate unique module and trait names by appending the struct name
+    let sealed_mod_name = Ident::new(&format!("sealed_{}", struct_name), struct_name.span());
+    let protector_trait_name = Ident::new(
+        &format!("ProtectorTrait{}", struct_name),
+        struct_name.span(),
+    );
 
     // Extract the methods from the impl block
     let mut methods = Vec::new();
@@ -50,7 +54,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
                     method,
                     &struct_name,
                     &require_args,
-                    &generics,
+                    &input.generics,
                 )
             } else {
                 quote! { #method }
@@ -61,7 +65,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
-    // Generate the marker structs, and their implementations
+    // Generate marker structs, sealed implementations, and trait implementations
     let mut markers = Vec::new();
     let mut sealed_impls = Vec::new();
     let mut trait_impls = Vec::new();
@@ -74,22 +78,23 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         });
 
         sealed_impls.push(quote! {
-            impl sealed::Sealed for #marker_name {}
+            impl #sealed_mod_name::Sealed for #marker_name {}
         });
 
         trait_impls.push(quote! {
-            impl TypeStateProtector for #marker_name {}
+            impl #protector_trait_name for #marker_name {}
         });
     }
 
-    // Generate the full expanded code
+    // Generate the expanded code with unique modules and traits
     let expanded = quote! {
-        // Private module to seal traits
-        mod sealed {
+        // Private module to seal traits (unique to this struct)
+        mod #sealed_mod_name {
             pub trait Sealed {}
         }
 
-        pub trait TypeStateProtector: sealed::Sealed {}
+        // Trait unique to this struct to ensure type state protection
+        pub trait #protector_trait_name: #sealed_mod_name::Sealed {}
 
         #(#markers)*
 
