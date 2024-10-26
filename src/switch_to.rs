@@ -1,13 +1,20 @@
-use quote::quote;
-use syn::{punctuated::Punctuated, Ident, PathArguments, ReturnType, Token, Type};
+use syn::{punctuated::Punctuated, Ident, PathArguments, ReturnType, Token, Type, TypePath};
 
 pub fn switch_to_inner(
     fn_output: &ReturnType,
     parsed_args: &Punctuated<Ident, Token![,]>,
 ) -> ReturnType {
-    // Get the full list of arguments as a vec: (A, B, State1, ...)
-    let generic_idents: Vec<proc_macro2::TokenStream> =
-        parsed_args.iter().map(|i| quote!(#i)).collect();
+    // Get the full list of arguments as syn::GenericArgument (A, B, State1, ...)
+    let generic_idents: Vec<syn::GenericArgument> = parsed_args
+        .iter()
+        .map(|i| {
+            syn::GenericArgument::Type(Type::Path(TypePath {
+                qself: None,
+                path: i.clone().into(),
+            }))
+        })
+        .collect();
+
     // Parse the original return type from the function signature
     let original_return_type = match &fn_output {
         ReturnType::Type(_, ty) => &**ty,
@@ -17,28 +24,34 @@ pub fn switch_to_inner(
     // Check if the original return type has angle brackets for generics
     let modified_return_type = match original_return_type {
         Type::Path(type_path) => {
-            // Extract the type path without generics (e.g., PlayerBuilder).
-            let type_name = &type_path.path.segments.last().unwrap().ident;
+            // Clone the type_path to modify its segments
+            let mut modified_type_path = type_path.clone();
+            let last_segment = modified_type_path.path.segments.last_mut().unwrap(); // Mutable reference to the last segment
 
-            match &type_path.path.segments.last().unwrap().arguments {
+            match &mut last_segment.arguments {
                 PathArguments::AngleBracketed(arguments) => {
-                    // Extract existing generics.
-                    let existing_generics = &arguments.args;
-                    quote! {
-                        #type_name<#existing_generics, #(#generic_idents),*>
-                    }
+                    // Add the new generics to existing generics
+                    arguments.args.extend(generic_idents);
                 }
                 PathArguments::None => {
                     // No existing generics, so we add ours as a new set.
-                    quote! {
-                        #type_name<#(#generic_idents),*>
-                    }
+                    last_segment.arguments =
+                        PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+                            args: generic_idents.into_iter().collect(),
+                            colon2_token: None,
+                            lt_token: Default::default(),
+                            gt_token: Default::default(),
+                        });
                 }
                 _ => panic!("Unsupported path arguments in return type."),
             }
+
+            // Return the modified type
+            Type::Path(modified_type_path)
         }
         _ => panic!("Expected a return type that is a path."),
     };
 
+    // Return the modified ReturnType
     ReturnType::Type(Default::default(), Box::new(modified_return_type))
 }
