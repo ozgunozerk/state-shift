@@ -1,8 +1,10 @@
+use proc_macro2::TokenStream;
 /// this file contains the logic that modifies the methods that are annotated with `#[require]` macro,
 /// however, all the functions inside this file will be used by `#[states]` macro due to delegation needs
 use quote::quote;
 use syn::{
-    punctuated::Punctuated, Expr, GenericParam, Ident, ImplItemFn, Member, Stmt, Token, TypeParam,
+    punctuated::Punctuated, Expr, ExprStruct, GenericParam, Ident, ImplItemFn, Member, Stmt, Token,
+    TypeParam,
 };
 
 use crate::{extract_macro_args, is_single_letter, switch_to_inner};
@@ -77,22 +79,12 @@ pub fn generate_impl_block_for_method_based_on_require_args(
         .stmts
         .iter()
         .map(|stmt| {
-            if let Stmt::Expr(Expr::Struct(expr_struct), maybe_semi) = stmt {
-                if expr_struct.path.is_ident(struct_name) {
-                    let mut new_fields = expr_struct.fields.clone();
-                    new_fields.push(syn::FieldValue {
-                        attrs: Vec::new(),
-                        member: Member::Named(syn::Ident::new("_state", struct_name.span())),
-                        colon_token: Some(<Token![:]>::default()),
-                        expr: Expr::Verbatim(phantom_expr.clone()),
-                    });
-                    return Stmt::Expr(
-                        syn::Expr::Struct(syn::ExprStruct {
-                            fields: new_fields,
-                            ..expr_struct.clone()
-                        }),
-                        *maybe_semi,
-                    );
+            if let Stmt::Expr(expr, maybe_semi) = stmt {
+                if let Some(modified_expr) =
+                    modify_struct_in_expr(expr, struct_name, phantom_expr.clone())
+                {
+                    // Return the modified expression as a statement
+                    return Stmt::Expr(modified_expr, *maybe_semi);
                 }
             }
             stmt.clone()
@@ -112,7 +104,7 @@ pub fn generate_impl_block_for_method_based_on_require_args(
 
     // Generate the impl block for the method based on the extracted #[require] arguments
     let new_output = if let Some(switch_to_args) = switch_to_args {
-        switch_to_inner(fn_output, &switch_to_args)
+        switch_to_inner(fn_output, &switch_to_args, &struct_name)
     } else {
         fn_output.clone()
     };
@@ -137,4 +129,54 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     };
 
     output
+}
+
+fn modify_struct_in_expr(
+    expr: &Expr,
+    struct_name: &syn::Ident,
+    phantom_expr: TokenStream,
+) -> Option<Expr> {
+    match expr {
+        Expr::Struct(expr_struct) if expr_struct.path.is_ident(struct_name) => {
+            // Clone the struct fields and add the `_state` field
+            let mut new_fields = expr_struct.fields.clone();
+            new_fields.push(syn::FieldValue {
+                attrs: Vec::new(),
+                member: Member::Named(syn::Ident::new("_state", struct_name.span())),
+                colon_token: Some(<Token![:]>::default()),
+                expr: Expr::Verbatim(phantom_expr.clone()),
+            });
+
+            // Return a modified struct expression with the new fields
+            Some(Expr::Struct(ExprStruct {
+                fields: new_fields,
+                ..expr_struct.clone()
+            }))
+        }
+        // If it's an expression like `Some(Player { ... })` or `Ok(Player { ... })`
+        Expr::Call(call_expr) => {
+            let mut new_args = vec![];
+            let mut modified = false;
+
+            for arg in &call_expr.args {
+                let phantom = phantom_expr.clone();
+                if let Some(modified_arg) = modify_struct_in_expr(arg, struct_name, phantom) {
+                    new_args.push(modified_arg);
+                    modified = true;
+                } else {
+                    new_args.push(arg.clone());
+                }
+            }
+
+            if modified {
+                Some(Expr::Call(syn::ExprCall {
+                    args: new_args.into_iter().collect(),
+                    ..call_expr.clone()
+                }))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }

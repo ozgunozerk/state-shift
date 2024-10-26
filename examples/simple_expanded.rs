@@ -1,5 +1,6 @@
 /// Here you can find the `cargo expand` output of the `simple_example.rs` test file.
-/// This is a rough `expansion`, and does not expand irrelevant parts of the code (e.g. `#[derive(Debug)]`, etc.)
+/// This is a rough `expansion`, ignores some minor details for readability,
+/// and does not expand irrelevant parts of the code (e.g. `#[derive(Debug)]`, etc.)
 ///
 /// This file serves the purpose of revealing what's happening behind the curtains.
 use std::marker::PhantomData;
