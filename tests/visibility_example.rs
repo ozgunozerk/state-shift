@@ -2,7 +2,7 @@ mod example {
     use std::marker::PhantomData;
     use std::mem::MaybeUninit;
 
-    use state_shift::{states, switch_to, type_state};
+    use state_shift::{states, type_state};
 
     pub struct MyParentObject<'base> {
         #[allow(unused)]

@@ -1,4 +1,4 @@
-use state_shift::{states, switch_to, type_state};
+use state_shift::{states, type_state};
 
 #[derive(Debug)]
 struct Player {

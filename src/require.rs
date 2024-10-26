@@ -2,37 +2,10 @@
 /// however, all the functions inside this file will be used by `#[states]` macro due to delegation needs
 use quote::quote;
 use syn::{
-    punctuated::Punctuated, Attribute, Expr, GenericParam, Ident, ImplItemFn, Member, Stmt, Token,
-    TypeParam,
+    punctuated::Punctuated, Expr, GenericParam, Ident, ImplItemFn, Member, Stmt, Token, TypeParam,
 };
 
-pub fn extract_require_args(
-    attrs: &mut Vec<Attribute>,
-    struct_name: &Ident,
-) -> Option<Punctuated<Ident, Token![,]>> {
-    let pos = attrs
-        .iter()
-        .position(|attr| attr.path().is_ident("require"))?;
-    let attr = attrs.remove(pos);
-
-    // Parse the arguments from the `#[require]` macro
-    let args: Punctuated<Ident, Token![,]> =
-        attr.parse_args_with(Punctuated::parse_terminated).ok()?;
-
-    // Modify the arguments: prefix struct name for non-single-letter idents
-    let modified_args = args
-        .into_iter()
-        .map(|ident| {
-            if is_single_letter(&ident) {
-                ident
-            } else {
-                Ident::new(&format!("{}{}", struct_name, ident), ident.span())
-            }
-        })
-        .collect::<Punctuated<Ident, Token![,]>>();
-
-    Some(modified_args)
-}
+use crate::{extract_macro_args, is_single_letter, switch_to_inner};
 
 pub fn generate_impl_block_for_method_based_on_require_args(
     input_fn: &mut ImplItemFn,
@@ -127,16 +100,28 @@ pub fn generate_impl_block_for_method_based_on_require_args(
         .collect();
 
     // Collect other function attributes (excluding `#[require]`).
-    let other_attrs: Vec<_> = input_fn
+    let mut other_attrs: Vec<_> = input_fn
         .attrs
         .iter()
         .filter(|attr| !attr.path().is_ident("require"))
+        .cloned()
         .collect();
 
-    // Get the function name and its generics
-    let fn_name = &input_fn.sig.ident;
-    let fn_inputs = &input_fn.sig.inputs;
     let fn_output = &input_fn.sig.output;
+    let switch_to_args = extract_macro_args(&mut other_attrs, "switch_to", &struct_name);
+
+    // Generate the impl block for the method based on the extracted #[require] arguments
+    let new_output = if let Some(switch_to_args) = switch_to_args {
+        switch_to_inner(fn_output, &switch_to_args)
+    } else {
+        fn_output.clone()
+    };
+
+    // construct the signature again
+    let fn_sig = &mut input_fn.sig;
+    fn_sig.output = new_output;
+
+    // extract visibility
     let fn_vis = &input_fn.vis;
 
     // Generate the final output `impl` block.
@@ -145,15 +130,11 @@ pub fn generate_impl_block_for_method_based_on_require_args(
         #merged_where_clause
         {
             #(#other_attrs)*
-            #fn_vis fn #fn_name(#fn_inputs) #fn_output {
+            #fn_vis #fn_sig {
                 #(#new_fn_body)*
             }
         }
     };
 
     output
-}
-
-fn is_single_letter(ident: &Ident) -> bool {
-    ident.to_string().len() == 1
 }

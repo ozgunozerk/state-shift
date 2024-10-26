@@ -1,28 +1,15 @@
-use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    parse::Parser, parse_macro_input, punctuated::Punctuated, Ident, ItemFn, PathArguments,
-    ReturnType, Token, Type,
-};
+use syn::{punctuated::Punctuated, Ident, PathArguments, ReturnType, Token, Type};
 
-pub fn switch_to_inner(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input arguments and function: (State1, State2, ...)
-    let args_parser = Punctuated::<Ident, Token![,]>::parse_terminated;
-    let parsed_args = args_parser.parse(args).unwrap();
-    let input_fn = parse_macro_input!(input as ItemFn);
-
-    // Get the function name, inputs, and body
-    let fn_name = &input_fn.sig.ident;
-    let fn_inputs = &input_fn.sig.inputs;
-    let fn_body = &input_fn.block;
-    let fn_vis = &input_fn.vis;
-
+pub fn switch_to_inner(
+    fn_output: &ReturnType,
+    parsed_args: &Punctuated<Ident, Token![,]>,
+) -> ReturnType {
     // Get the full list of arguments as a vec: (A, B, State1, ...)
     let generic_idents: Vec<proc_macro2::TokenStream> =
         parsed_args.iter().map(|i| quote!(#i)).collect();
-
     // Parse the original return type from the function signature
-    let original_return_type = match &input_fn.sig.output {
+    let original_return_type = match &fn_output {
         ReturnType::Type(_, ty) => &**ty,
         _ => panic!("Expected a return type."),
     };
@@ -53,12 +40,5 @@ pub fn switch_to_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         _ => panic!("Expected a return type that is a path."),
     };
 
-    // Construct the new method with the modified return type
-    let output = quote! {
-        #fn_vis fn #fn_name(#fn_inputs) -> #modified_return_type {
-            #fn_body
-        }
-    };
-
-    output.into()
+    ReturnType::Type(Default::default(), Box::new(modified_return_type))
 }

@@ -8,7 +8,7 @@ use syn::{
     Ident, ImplItem, ItemImpl, Token, Type,
 };
 
-use crate::{extract_require_args, generate_impl_block_for_method_based_on_require_args};
+use crate::{extract_macro_args, generate_impl_block_for_method_based_on_require_args};
 
 struct StatesInput {
     states: Punctuated<Ident, Token![,]>,
@@ -48,7 +48,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
     for item in input.items.iter_mut() {
         if let ImplItem::Fn(ref mut method) = item {
             // Extract `#[require]` arguments if they exist
-            let require_args = extract_require_args(&mut method.attrs, &struct_name);
+            let require_args = extract_macro_args(&mut method.attrs, "require", &struct_name);
 
             // Generate the impl block for the method based on the extracted #[require] arguments
             let modified_method = if let Some(require_args) = require_args {
