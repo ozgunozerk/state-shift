@@ -6,14 +6,32 @@ use syn::{
     TypeParam,
 };
 
-pub fn extract_require_args(attrs: &mut Vec<Attribute>) -> Option<Punctuated<Ident, Token![,]>> {
+pub fn extract_require_args(
+    attrs: &mut Vec<Attribute>,
+    struct_name: &Ident,
+) -> Option<Punctuated<Ident, Token![,]>> {
     let pos = attrs
         .iter()
         .position(|attr| attr.path().is_ident("require"))?;
     let attr = attrs.remove(pos);
 
     // Parse the arguments from the `#[require]` macro
-    attr.parse_args_with(Punctuated::parse_terminated).ok()
+    let args: Punctuated<Ident, Token![,]> =
+        attr.parse_args_with(Punctuated::parse_terminated).ok()?;
+
+    // Modify the arguments: prefix struct name for non-single-letter idents
+    let modified_args = args
+        .into_iter()
+        .map(|ident| {
+            if is_single_letter(&ident) {
+                ident
+            } else {
+                Ident::new(&format!("{}{}", struct_name, ident), ident.span())
+            }
+        })
+        .collect::<Punctuated<Ident, Token![,]>>();
+
+    Some(modified_args)
 }
 
 pub fn generate_impl_block_for_method_based_on_require_args(
@@ -40,13 +58,14 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     // put the sealed trait boundary for the generics:
     /*
     ``` where
-    A: TypeStateProtector,
-    B: TypeStateProtector,
+    A: Sealer,
+    B: Sealer,
      */
+    let sealer_trait_name = Ident::new(&format!("Sealer{}", struct_name), struct_name.span());
     let new_where_clauses: Vec<proc_macro2::TokenStream> = parsed_args
         .iter()
         .filter(|ident| is_single_letter(ident))
-        .map(|ident| quote!(#ident: TypeStateProtector))
+        .map(|ident| quote!(#ident: #sealer_trait_name))
         .collect();
 
     // Merge with the existing where clause, if any.

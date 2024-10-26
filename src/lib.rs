@@ -50,7 +50,7 @@ pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
 /// What it does:
 /// - defines the set of states that a type can transition between,
 /// - generates marker structs for these states
-/// - seals these traits and structs with `TypeStateProtector trait` for each state,
+/// - seals these traits and structs with `Sealer` trait for each state,
 /// - provides the necessary `struct_name` information to `#[require]` macro
 ///
 /// Also:

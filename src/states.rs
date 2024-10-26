@@ -1,3 +1,4 @@
+use inflector::cases::snakecase::to_snake_case;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -34,11 +35,12 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     // Generate unique module and trait names by appending the struct name
-    let sealed_mod_name = Ident::new(&format!("sealed_{}", struct_name), struct_name.span());
-    let protector_trait_name = Ident::new(
-        &format!("ProtectorTrait{}", struct_name),
+    // Convert the struct name to snake case
+    let sealed_mod_name = Ident::new(
+        &format!("sealed_{}", to_snake_case(&struct_name.to_string())),
         struct_name.span(),
     );
+    let sealer_trait_name = Ident::new(&format!("Sealer{}", struct_name), struct_name.span());
 
     // Extract the methods from the impl block
     let mut methods = Vec::new();
@@ -46,7 +48,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
     for item in input.items.iter_mut() {
         if let ImplItem::Fn(ref mut method) = item {
             // Extract `#[require]` arguments if they exist
-            let require_args = extract_require_args(&mut method.attrs);
+            let require_args = extract_require_args(&mut method.attrs, &struct_name);
 
             // Generate the impl block for the method based on the extracted #[require] arguments
             let modified_method = if let Some(require_args) = require_args {
@@ -71,7 +73,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut trait_impls = Vec::new();
 
     for state in args.states {
-        let marker_name = Ident::new(&format!("{}", state), state.span());
+        let marker_name = Ident::new(&format!("{}{}", struct_name, state), state.span());
 
         markers.push(quote! {
             pub struct #marker_name;
@@ -82,7 +84,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         });
 
         trait_impls.push(quote! {
-            impl #protector_trait_name for #marker_name {}
+            impl #sealer_trait_name for #marker_name {}
         });
     }
 
@@ -94,7 +96,7 @@ pub fn states_inner(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         // Trait unique to this struct to ensure type state protection
-        pub trait #protector_trait_name: #sealed_mod_name::Sealed {}
+        pub trait #sealer_trait_name: #sealed_mod_name::Sealed {}
 
         #(#markers)*
 
