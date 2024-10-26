@@ -100,11 +100,11 @@ pub fn generate_impl_block_for_method_based_on_require_args(
         .collect();
 
     let fn_output = &input_fn.sig.output;
-    let switch_to_args = extract_macro_args(&mut other_attrs, "switch_to", &struct_name);
+    let switch_to_args = extract_macro_args(&mut other_attrs, "switch_to", struct_name);
 
     // Generate the impl block for the method based on the extracted #[require] arguments
     let new_output = if let Some(switch_to_args) = switch_to_args {
-        switch_to_inner(fn_output, &switch_to_args, &struct_name)
+        switch_to_inner(fn_output, &switch_to_args, struct_name)
     } else {
         fn_output.clone()
     };

@@ -42,20 +42,17 @@ fn recursively_modify_return_type(
                 modify_type_path(type_path, generic_idents);
             } else {
                 // Handle cases where it's a wrapper type like Result<Player> or Option<Player>
-                match &mut last_segment.arguments {
-                    PathArguments::AngleBracketed(arguments) => {
-                        for arg in &mut arguments.args {
-                            if let syn::GenericArgument::Type(inner_type) = arg {
-                                // Recurse into the inner type to check for Player (or any target struct)
-                                recursively_modify_return_type(
-                                    inner_type,
-                                    generic_idents.clone(),
-                                    struct_name,
-                                );
-                            }
+                if let PathArguments::AngleBracketed(arguments) = &mut last_segment.arguments {
+                    for arg in &mut arguments.args {
+                        if let syn::GenericArgument::Type(inner_type) = arg {
+                            // Recurse into the inner type to check for Player (or any target struct)
+                            recursively_modify_return_type(
+                                inner_type,
+                                generic_idents.clone(),
+                                struct_name,
+                            );
                         }
                     }
-                    _ => {}
                 }
             }
         }
