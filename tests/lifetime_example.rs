@@ -178,7 +178,7 @@ mod tests {
             .set_level(10)
             .set_items_might_fail(items);
 
-        assert_eq!(player.is_some(), true);
+        assert!(player.is_some());
 
         let items = vec![];
         let player = PlayerBuilder::<String>::new()
@@ -186,7 +186,7 @@ mod tests {
             .set_level(10)
             .set_items_might_fail(items);
 
-        assert_eq!(player.is_none(), true);
+        assert!(player.is_none());
     }
 
     #[test]
