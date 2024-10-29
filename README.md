@@ -727,4 +727,14 @@ fn main() {
 - you can use them in the body!
 - basically, yes!
 
+### 6. I don't see `require` and `switch_to` imported in the examples. What's up with that?
+
+`require` and `switch_to` are consumed by the `state_impl` macro. I don't want to dive into technical details,
+but basically `require` and `switch_to` need some extra info from the `impl` block, so `state_impl` macro handles all that
+communication. If you are curious, check out the inline docs in `lib.rs`.
+
+In short, you don't need to import `require` and `switch_to` in your code.
+
+---
+
 Happy coding!
