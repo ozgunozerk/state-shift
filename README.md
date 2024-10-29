@@ -160,10 +160,12 @@ fn main() {
 > A simple Type-State `PlayerBuilder` example WITH state-shift:
 
 ```rust
-use state_shift::{state_impl, switch_to, type_state};
+use state_shift::{state_impl, type_state};
 
-
-#[type_state(state_slots = 1, default_state = Initial)]
+#[type_state(
+    states = (Initial, RaceSet, LevelSet, SkillSlotsSet), // defines the available states
+    slots = (Initial) // defines how many concurrent states will be there, and the initial values for these states
+)]
 struct PlayerBuilder {
     race: Option<Race>,
     level: Option<u8>,
@@ -306,7 +308,10 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
 
 - with this library, you can write this (GOOD):
     ```rust
-    #[type_state(state_slots = 3, default_state = Initial)]
+    #[type_state(
+        states = (Initial, RaceSet, LevelSet, SkillSlotsSet),
+        slots = (Initial, Initial, Initial)
+    )]
     struct PlayerBuilder {
         race: Option<Race>,
         level: Option<u8>,
@@ -420,9 +425,12 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
 
 - with this library, you can write this (GOOD):
     ```rust
-    #[state_impl]
-    impl PlayerBuilder {
-        // ...methods redacted...
+    #[type_state(states = (Initial, RaceSet, LevelSet, SkillSlotsSet), slots = (Initial, Initial, Initial))]
+    struct PlayerBuilder {
+        race: Option<Race>,
+        level: Option<u8>,
+        skill_slots: Option<u8>,
+        spell_slots: Option<u8>,
     }
     ```
 
@@ -665,7 +673,10 @@ This is not a good solution due to 2 reasons:
 Multiple state slots. By allowing multiple state slots, you can track each state separately, and they won't override each other. You can see this in action in the `tests/complex_example.rs`. It showcases how this is done, and when can it be useful. Now, the macro for our struct should make more sense:
 
 ```rust
-#[type_state(state_slots = 3, default_state = Initial)]
+#[type_state(
+    states = (Initial, RaceSet, LevelSet, SkillSlotsSet), // defines the available states
+    slots = (Initial) // defines how many concurrent states will be there, and the initial values for these states
+)]
 struct PlayerBuilder {
     race: Option<Race>,
     level: Option<u8>,
