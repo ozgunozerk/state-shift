@@ -1,4 +1,4 @@
-use state_shift::{states, type_state};
+use state_shift::{state_impl, type_state};
 
 #[derive(Debug)]
 struct Player {
@@ -11,12 +11,12 @@ enum Race {
     Human,
 }
 
-#[type_state(state_slots = 1, default_state = Initial1)]
+#[type_state(states = (Initial1, RaceSet1), slots = (Initial1))]
 struct PlayerBuilder1 {
     race: Option<Race>,
 }
 
-#[states(Initial1, RaceSet1)]
+#[state_impl]
 impl PlayerBuilder1 {
     #[require(Initial1)] // require the default state for the constructor
     fn new() -> PlayerBuilder1 {
@@ -37,12 +37,12 @@ impl PlayerBuilder1 {
     }
 }
 
-#[type_state(state_slots = 1, default_state = Initial2)]
+#[type_state(states = (Initial2, RaceSet2), slots = (Initial2))]
 struct PlayerBuilder2 {
     race: Option<Race>,
 }
 
-#[states(Initial2, RaceSet2)]
+#[state_impl]
 impl PlayerBuilder2 {
     #[require(Initial2)] // require the default state for the constructor
     fn new() -> PlayerBuilder2 {

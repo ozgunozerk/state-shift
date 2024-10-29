@@ -1,39 +1,75 @@
+use inflector::cases::snakecase::to_snake_case;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Fields, Ident, ItemStruct};
 
-pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the `state_slots` and `default_state` from the arguments
-    /*
-    Indices:
-    ---
-    0. `state_slots`
-    1. `=`
-    2. `3` (this is the value you're interested in for state_slots)
-    4. `,`
-    5. `default_state`
-    6. `=`
-    7. `Initial` (this is the value you're interested in for default_state)
-     */
+use crate::extract_idents_from_group;
 
+pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     // Parse the input struct
     let input_struct = parse_macro_input!(input as ItemStruct);
     let struct_name = &input_struct.ident;
     let generics = &input_struct.generics;
     let visibility = &input_struct.vis;
 
-    // Parse the `state_slots` and `default_state` from the arguments
+    // Parse arguments (states and slots)
+    /*
+    Indices:
+    ---
+    0. `states`
+    1. `=`
+    2. `(State1, State2, State3)`
+    3. `,`
+    4. `slots`
+    5. `=`
+    6. `(State1, State1)`
+     */
     let input_args: Vec<_> = args.into_iter().collect();
-    let state_slots: usize = input_args[2]
-        .to_string()
-        .parse()
-        .expect("Expected a valid number for state_slots.");
-    let default_state: Ident = match &input_args[6] {
-        proc_macro::TokenTree::Ident(ident) => {
-            Ident::new(&format!("{}{}", struct_name, ident), ident.span().into())
-        }
-        _ => panic!("Expected an identifier for default_state."),
-    };
+    let states: Vec<Ident> =
+        extract_idents_from_group(&input_args[2], struct_name, "expected a list of states");
+
+    let default_slots: Vec<Ident> = extract_idents_from_group(
+        &input_args[6],
+        struct_name,
+        "expected a list of default slots",
+    );
+
+    // Generate the marker structs and sealing traits
+    let sealer_trait_name = Ident::new(&format!("Sealer{}", struct_name), struct_name.span());
+    let sealed_mod_name = Ident::new(
+        &format!("sealed_{}", to_snake_case(&struct_name.to_string())),
+        struct_name.span(),
+    );
+
+    let markers: Vec<_> = states
+        .iter()
+        .map(|state| {
+            let marker_name = Ident::new(&format!("{}", state), state.span());
+            quote! {
+                pub struct #marker_name;
+            }
+        })
+        .collect();
+
+    let sealed_impls: Vec<_> = states
+        .iter()
+        .map(|state| {
+            let marker_name = Ident::new(&format!("{}", state), state.span());
+            quote! {
+                impl #sealed_mod_name::Sealed for #marker_name {}
+            }
+        })
+        .collect();
+
+    let trait_impls: Vec<_> = states
+        .iter()
+        .map(|state| {
+            let marker_name = Ident::new(&format!("{}", state), state.span());
+            quote! {
+                impl #sealer_trait_name for #marker_name {}
+            }
+        })
+        .collect();
 
     // Extract fields from the struct
     // we cannot use `input_struct.fields` directly because
@@ -47,7 +83,7 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     // Generate state generics: `struct StructName<PlayerState1, PlayerState2, ...>`
-    let state_idents: Vec<Ident> = (0..state_slots)
+    let state_idents: Vec<_> = (0..default_slots.len())
         .map(|i| {
             Ident::new(
                 &format!("{}State{}", struct_name, i + 1),
@@ -55,9 +91,9 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
             )
         })
         .collect();
-    let default_generics = vec![quote!(#default_state); state_slots];
 
-    // Construct the new generics by merging original generics with state slots set to the default state
+    // Construct the new generics by merging original generics with default states
+    let default_generics = default_slots.iter().collect::<Vec<_>>();
     let combined_generics = if generics.params.is_empty() {
         quote! { #(#state_idents = #default_generics),* }
     } else {
@@ -65,16 +101,17 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! { #(#original_generics),*, #(#state_idents = #default_generics),* }
     };
 
-    let sealer_trait_name = Ident::new(&format!("Sealer{}", struct_name), struct_name.span());
-    let where_clauses: Vec<_> = state_idents
+    // create a new where clause for the new generics (states)
+    let new_where_clause: Vec<_> = state_idents
         .iter()
         .map(|state| quote!(#state: #sealer_trait_name))
         .collect();
 
+    // Merge the where clauses if there is an existing one
     let merged_where_clause = if let Some(existing_where) = &generics.where_clause {
-        quote! { #existing_where #(#where_clauses),* }
-    } else if !where_clauses.is_empty() {
-        quote! { where #(#where_clauses),* }
+        quote! { #existing_where #(#new_where_clause),* }
+    } else if !new_where_clause.is_empty() {
+        quote! { where #(#new_where_clause),* }
     } else {
         quote! {}
     };
@@ -87,7 +124,20 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         .map(|ident| quote!(::std::marker::PhantomData<fn() -> #ident>))
         .collect::<Vec<_>>();
 
+    // Generate the final output
     let output = quote! {
+        mod #sealed_mod_name {
+            pub trait Sealed {}
+        }
+
+        pub trait #sealer_trait_name: #sealed_mod_name::Sealed {}
+
+        #(#markers)*
+
+        #(#sealed_impls)*
+
+        #(#trait_impls)*
+
         #[allow(clippy::type_complexity)]
         #visibility struct #struct_name<#combined_generics>
         #merged_where_clause

@@ -160,7 +160,7 @@ fn main() {
 > A simple Type-State `PlayerBuilder` example WITH state-shift:
 
 ```rust
-use state_shift::{states, switch_to, type_state};
+use state_shift::{state_impl, switch_to, type_state};
 
 
 #[type_state(state_slots = 1, default_state = Initial)]
@@ -170,7 +170,7 @@ struct PlayerBuilder {
     skill_slots: Option<u8>,
 }
 
-#[states(Initial, RaceSet, LevelSet, SkillSlotsSet)]
+#[state_impl]
 impl PlayerBuilder {
     #[require(Initial)] // require the default state for the constructor
     fn new() -> PlayerBuilder {
@@ -420,7 +420,7 @@ Consuming huge chunks of code may be overwhelming, so let's break it down.
 
 - with this library, you can write this (GOOD):
     ```rust
-    #[states(Initial, RaceSet, LevelSet, SkillSlotsSet, SpellSlotsSet)]
+    #[state_impl]
     impl PlayerBuilder {
         // ...methods redacted...
     }
