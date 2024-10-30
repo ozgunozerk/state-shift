@@ -1,4 +1,4 @@
-use state_shift::{states, type_state};
+use state_shift::{impl_state, type_state};
 
 use std::fmt::Debug;
 
@@ -16,7 +16,7 @@ enum Race {
     Human,
 }
 
-#[type_state(state_slots = 1, default_state = Initial)]
+#[type_state(states = (Initial, RaceSet, LevelSet, ItemsSet), slots = (Initial))]
 struct PlayerBuilder<'a, T>
 where
     T: Debug,
@@ -26,7 +26,7 @@ where
     items: Option<Vec<&'a T>>,
 }
 
-#[states(Initial, RaceSet, LevelSet, ItemsSet)]
+#[impl_state]
 impl<'a, T> PlayerBuilder<'a, T>
 where
     T: Debug,

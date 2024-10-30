@@ -1,6 +1,6 @@
-use proc_macro2::TokenStream;
 /// this file contains the logic that modifies the methods that are annotated with `#[require]` macro,
-/// however, all the functions inside this file will be used by `#[states]` macro due to delegation needs
+/// however, all the functions inside this file will be used by `#[impl_state]` macro due to delegation needs
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
     punctuated::Punctuated, Expr, ExprStruct, GenericParam, Ident, ImplItemFn, Member, Stmt, Token,

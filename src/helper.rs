@@ -1,3 +1,4 @@
+use proc_macro::TokenTree;
 use syn::{punctuated::Punctuated, Attribute, Ident, Token};
 
 /// Helper function to find and remove an attribute by name
@@ -24,7 +25,6 @@ fn modify_args_with_struct_name(
         .collect()
 }
 
-/// Main function to extract and modify macro arguments
 pub fn extract_macro_args(
     attrs: &mut Vec<Attribute>,
     macro_name: &str,
@@ -38,4 +38,28 @@ pub fn extract_macro_args(
 
 pub fn is_single_letter(ident: &Ident) -> bool {
     ident.to_string().len() == 1
+}
+
+pub fn extract_idents_from_group(
+    token: &TokenTree,
+    struct_name: &Ident,
+    error_msg: &str,
+) -> Vec<Ident> {
+    match token {
+        proc_macro::TokenTree::Group(group) => group
+            .stream()
+            .into_iter()
+            .filter_map(|tt| {
+                if let proc_macro::TokenTree::Ident(ident) = tt {
+                    Some(Ident::new(
+                        &format!("{}{}", struct_name, ident),
+                        ident.span().into(),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        _ => panic!("{}", error_msg),
+    }
 }

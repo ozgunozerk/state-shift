@@ -9,22 +9,22 @@
 //!
 //! Macros:
 //!
-//! - `#[require]`: Enforces that a method can only be called when the provided state is active..
+//! - `#[require]`: Enforces that a method can only be called when the provided state is active.
 //! - `#[switch_to]`: Modifies the return type of methods to switch between states.
-//! - `#[states]`: Defines the valid states for a given type and generates corresponding marker structs and trait implementations.
+//! - `#[impl_state]`: Defines the valid states for a given type and generates corresponding marker structs and trait implementations.
 //! - `#[type_state]`: Transforms the struct into type-state compatible form, using state slots and default states.
 
 extern crate proc_macro;
 
 mod helper;
+mod impl_state;
 mod require;
-mod states;
 mod switch_to;
 mod type_state;
 
-use helper::{extract_macro_args, is_single_letter};
+use helper::{extract_idents_from_group, extract_macro_args, is_single_letter};
+use impl_state::impl_state_inner;
 use require::generate_impl_block_for_method_based_on_require_args;
-use states::states_inner;
 use switch_to::switch_to_inner;
 use type_state::type_state_inner;
 
@@ -32,37 +32,38 @@ use proc_macro::TokenStream;
 
 /// Turns your struct into type-state compatible version.
 ///
-/// Usage: `#[type_state(state_slots = 3, default_state = Initial)]`
+/// Usage: `#[type_state(states = (State1, State2, ...), slots = (DefaultState, ...))]`
 ///
 /// Arguments:
-/// - `state_slots` -> if you want to track multiple states at the same time
-/// - `default_state` -> the initial state of your struct, you must provide a one of the states defined in the `#[states]` macro
+/// - `states` -> A list of the states that the struct can transition through, which will be generated as marker structs and traits.
+/// - `slots` -> Specifies the default states for the struct's state slots. Each slot corresponds to a tracked state.
 ///
-/// also protects your struct from getting initialized with random types/states
-/// by enforcing sealed-trait bounds on the states.
+/// What it does:
+/// - Defines the valid states that a struct can transition between using the `states` attribute,
+/// - Configures multiple state slots if needed, allowing a struct to track multiple states concurrently,
+/// - Protects against invalid struct initialization by sealing state transitions using traits and marker structs,
+/// - Seals the trait implementations for each state to ensure safety and prevent external modification.
 #[proc_macro_attribute]
 pub fn type_state(args: TokenStream, input: TokenStream) -> TokenStream {
     type_state_inner(args, input)
 }
 
-/// Denotes which states will be used for the type-state pattern.
+/// Modifies the methods in an `impl` block to work with the type-state pattern.
 ///
-/// Usage: `#[states(State1, State2, ...)]`
+/// Usage: `#[impl_state]`
 ///
 /// What it does:
-/// - defines the set of states that a type can transition between,
-/// - generates marker structs for these states
-/// - seals these traits and structs with `Sealer` trait for each state,
-/// - provides the necessary `struct_name` information to `#[require]` macro
+/// - Applies type-state-specific transformations to methods in an `impl` block,
+/// - Enforces state requirements on methods with the `#[require]` macro,
+/// - Transforms methods that transition between states using the `#[switch_to]` macro,
+/// - Automatically adds the hidden `_state` field to the `Self {}` struct initialization, ensuring compliance with the type-state pattern.
 ///
 /// Also:
-/// - consumes `#[require]` macro and does the things mentioned in `#[require]` macro's inline docs, which are:
-/// - generates a specific `impl` block for each method,
-/// - adds the required types and generics to the generated `impl` blocks,
-/// - adds the hidden `_state` field to the `Self { }` struct, so you don't have to worry about anything regarding type-state-pattern
+/// - Consumes the `#[require]` and `#[switch_to]` macros and handles the necessary transformations for those macros,
+/// - Ensures that the methods only execute in the correct state and can safely transition between valid states.
 #[proc_macro_attribute]
-pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
-    states_inner(attr, item)
+pub fn impl_state(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    impl_state_inner(item)
 }
 
 /// Denotes which state is required for this method to be called.
@@ -71,19 +72,21 @@ pub fn states(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// - `#[require(State1)]`
 /// - or with multiple state slots: `#[require(State1, State2, ...)]`
 ///
-/// This macro is consumed by the `#[states]` macro, and it basically guiding `#[states]` macro to:
+/// This macro is consumed by the `#[impl_state]` macro, and it basically guides `#[impl_state]` macro to:
 /// - generate a specific `impl` block for each method,
 /// - add the required types and generics to the generated `impl` blocks,
 /// - add the hidden `_state` field to the `Self { }` struct, so you don't have to worry about anything regarding type-state-pattern
 ///
-/// hence, it is empty, because it delegates its job to `#[states]` macro
+/// hence, it is empty, because it delegates its job to `#[impl_state]` macro
 /// the reason for that delegation is: `#[require]` macro needs the below from the encapsulating `impl` block for the methods
 /// - name of the impl block (name of the struct)
 /// - generics
 /// - lifetimes
 #[proc_macro_attribute]
 pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
-    unreachable!()
+    unreachable!(
+        "`#[require]` macro should not be imported. It is consumed by the `#[impl_state]` macro."
+    );
 }
 
 /// Denotes to which state will the object transition into after this method
@@ -92,13 +95,15 @@ pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
 /// - `#[switch_to(State1)]`
 /// - or with multiple state slots: `#[switch_to(State1, State2, ...)]`
 ///
-/// This macro is consumed by the `#[states]` macro, and it basically guiding `#[states]` macro to:
-/// - overwrite the return type of the methods generated by the `#[states]` macro
+/// This macro is consumed by the `#[impl_state]` macro, and it basically guides `#[impl_state]` macro to:
+/// - overwrite the return type of the methods generated by the `#[impl_state]` macro
 ///
-/// hence, it is empty, because it delegates its job to `#[states]` macro
+/// hence, it is empty, because it delegates its job to `#[impl_state]` macro
 /// the reason for that delegation is: `#[switch_to]` macro needs the below from the encapsulating `impl` block for the methods
 /// - name of the impl block (name of the struct)
 #[proc_macro_attribute]
 pub fn switch_to(_args: TokenStream, _input: TokenStream) -> TokenStream {
-    unreachable!()
+    unreachable!(
+        "`#[switch_to]` macro should not be imported. It is consumed by the `#[impl_state]` macro."
+    );
 }

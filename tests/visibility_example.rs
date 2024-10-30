@@ -2,7 +2,7 @@ mod example {
     use std::marker::PhantomData;
     use std::mem::MaybeUninit;
 
-    use state_shift::{states, type_state};
+    use state_shift::{impl_state, type_state};
 
     pub struct MyParentObject<'base> {
         #[allow(unused)]
@@ -33,7 +33,7 @@ mod example {
         }
     }
 
-    #[type_state(state_slots = 3, default_state = Unset)]
+    #[type_state(states = (Unset, ASet, BSet, AOrBSet), slots = (Unset, Unset, Unset))]
     pub struct MethodBuilder {
         #[allow(unused)]
         slot_a: Option<u8>,
@@ -42,7 +42,7 @@ mod example {
 
     impl MethodBuilder {}
 
-    #[states(Unset, ASet, BSet, AOrBSet)]
+    #[impl_state]
     impl MethodBuilder {
         #[require(Unset, Unset, Unset)] // require the default state for the constructor
         pub fn new() -> MethodBuilder {
