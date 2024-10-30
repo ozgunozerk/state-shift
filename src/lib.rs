@@ -84,7 +84,9 @@ pub fn impl_state(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// - lifetimes
 #[proc_macro_attribute]
 pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
-    unreachable!("The `#[require]` macro should not be imported. It is consumed by the `#[impl_state]` macro.");
+    unreachable!(
+        "`#[require]` macro should not be imported. It is consumed by the `#[impl_state]` macro."
+    );
 }
 
 /// Denotes to which state will the object transition into after this method
@@ -101,5 +103,7 @@ pub fn require(_args: TokenStream, _input: TokenStream) -> TokenStream {
 /// - name of the impl block (name of the struct)
 #[proc_macro_attribute]
 pub fn switch_to(_args: TokenStream, _input: TokenStream) -> TokenStream {
-    unreachable!("The `#[switch_to]` macro should not be imported. It is consumed by the `#[impl_state]` macro.");
+    unreachable!(
+        "`#[switch_to]` macro should not be imported. It is consumed by the `#[impl_state]` macro."
+    );
 }
