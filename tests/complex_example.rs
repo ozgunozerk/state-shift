@@ -1,4 +1,4 @@
-use state_shift::{state_impl, type_state};
+use state_shift::{impl_state, type_state};
 
 #[derive(Debug)]
 struct Player {
@@ -23,7 +23,7 @@ struct PlayerBuilder {
     spell_slots: Option<u8>,
 }
 
-#[state_impl]
+#[impl_state]
 impl PlayerBuilder {
     #[require(Initial, Initial, Initial)] // require the default state for the constructor
     fn new() -> Self {

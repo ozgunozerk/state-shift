@@ -1,4 +1,4 @@
-use state_shift::{state_impl, type_state};
+use state_shift::{impl_state, type_state};
 
 #[derive(Debug)]
 struct Player {
@@ -16,7 +16,7 @@ struct PlayerBuilder1 {
     race: Option<Race>,
 }
 
-#[state_impl]
+#[impl_state]
 impl PlayerBuilder1 {
     #[require(Initial1)] // require the default state for the constructor
     fn new() -> PlayerBuilder1 {
@@ -42,7 +42,7 @@ struct PlayerBuilder2 {
     race: Option<Race>,
 }
 
-#[state_impl]
+#[impl_state]
 impl PlayerBuilder2 {
     #[require(Initial2)] // require the default state for the constructor
     fn new() -> PlayerBuilder2 {

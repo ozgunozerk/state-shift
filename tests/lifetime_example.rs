@@ -1,4 +1,4 @@
-use state_shift::{state_impl, type_state};
+use state_shift::{impl_state, type_state};
 
 use std::fmt::Debug;
 
@@ -26,7 +26,7 @@ where
     items: Option<Vec<&'a T>>,
 }
 
-#[state_impl]
+#[impl_state]
 impl<'a, T> PlayerBuilder<'a, T>
 where
     T: Debug,

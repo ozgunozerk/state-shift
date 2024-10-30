@@ -2,7 +2,7 @@ mod example {
     use std::marker::PhantomData;
     use std::mem::MaybeUninit;
 
-    use state_shift::{state_impl, type_state};
+    use state_shift::{impl_state, type_state};
 
     pub struct MyParentObject<'base> {
         #[allow(unused)]
@@ -42,7 +42,7 @@ mod example {
 
     impl MethodBuilder {}
 
-    #[state_impl]
+    #[impl_state]
     impl MethodBuilder {
         #[require(Unset, Unset, Unset)] // require the default state for the constructor
         pub fn new() -> MethodBuilder {

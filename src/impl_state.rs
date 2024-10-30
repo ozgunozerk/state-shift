@@ -4,7 +4,7 @@ use syn::{parse_macro_input, ImplItem, ItemImpl, Type};
 
 use crate::{extract_macro_args, generate_impl_block_for_method_based_on_require_args};
 
-pub fn state_impl_inner(item: TokenStream) -> TokenStream {
+pub fn impl_state_inner(item: TokenStream) -> TokenStream {
     // Parse the impl block
     let mut input = parse_macro_input!(item as ItemImpl);
 

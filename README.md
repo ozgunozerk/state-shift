@@ -160,7 +160,7 @@ fn main() {
 > A simple Type-State `PlayerBuilder` example WITH state-shift:
 
 ```rust
-use state_shift::{state_impl, type_state};
+use state_shift::{impl_state, type_state};
 
 #[type_state(
     states = (Initial, RaceSet, LevelSet, SkillSlotsSet), // defines the available states
@@ -172,7 +172,7 @@ struct PlayerBuilder {
     skill_slots: Option<u8>,
 }
 
-#[state_impl]
+#[impl_state]
 impl PlayerBuilder {
     #[require(Initial)] // require the default state for the constructor
     fn new() -> PlayerBuilder {
@@ -729,8 +729,8 @@ fn main() {
 
 ### 6. I don't see `require` and `switch_to` imported in the examples. What's up with that?
 
-`require` and `switch_to` are consumed by the `state_impl` macro. I don't want to dive into technical details,
-but basically `require` and `switch_to` need some extra info from the `impl` block, so `state_impl` macro handles all that
+`require` and `switch_to` are consumed by the `impl_state` macro. I don't want to dive into technical details,
+but basically `require` and `switch_to` need some extra info from the `impl` block, so `impl_state` macro handles all that
 communication. If you are curious, check out the inline docs in `lib.rs`.
 
 In short, you don't need to import `require` and `switch_to` in your code.
