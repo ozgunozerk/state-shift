@@ -15,7 +15,7 @@ Say, you want to build a player, and some fields need to be set before the other
 > A simple Type-State `PlayerBuilder` example WITHOUT state-shift:
 
 ```rust
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 struct PlayerBuilder<State1 = Initial> {
     race: Option<Race>,
@@ -639,7 +639,7 @@ And you know how Rust compiler is. It is very strict about types!
 >             race: Some(Race::Human),
 >             level: self.level,
 >             skill_slots: self.skill_slots,
->            _state: (::std::marker::PhantomData), // Don't forget this!
+>            _state: (::core::marker::PhantomData), // Don't forget this!
 >         }
 >     }
 > }

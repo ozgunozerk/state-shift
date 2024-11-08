@@ -1,6 +1,6 @@
 use state_shift::{impl_state, type_state};
 
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 #[derive(Debug)]
 struct Player<'a, T> {
@@ -125,7 +125,7 @@ where
     T: Debug,
 {
     fn my_weird_method(&self) -> Self {
-        use std::marker::PhantomData;
+        use core::marker::PhantomData;
 
         Self {
             race: Some(Race::Human),
