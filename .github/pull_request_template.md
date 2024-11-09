@@ -16,4 +16,4 @@ Fixes #??? <!-- Fill in with issue number -->
 
 - [ ] Tests
 - [ ] Documentation
-- [ ] Pallets, that require benchmarks, are added to `scripts/assets/pallets.txt` (Pallet require benchmark if it has WeightInfo config type)
+
