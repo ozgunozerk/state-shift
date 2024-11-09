@@ -64,11 +64,11 @@ pub fn generate_impl_block_for_method_based_on_require_args(
 
     // Generate PhantomData for the required number of states
     let phantom_data: Vec<_> = (0..parsed_args.len())
-        .map(|_| quote!(::std::marker::PhantomData))
+        .map(|_| quote!(::core::marker::PhantomData))
         .collect();
 
     let phantom_expr = if phantom_data.len() == 1 {
-        quote! { ::std::marker::PhantomData }
+        quote! { ::core::marker::PhantomData }
     } else {
         quote! { ( #(#phantom_data),* ) }
     };

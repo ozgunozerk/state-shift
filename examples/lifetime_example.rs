@@ -3,7 +3,7 @@
 /// and does not expand irrelevant parts of the code (e.g. `#[derive(Debug)]`, etc.)
 ///
 /// This file serves the purpose of revealing what's happening behind the curtains.
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 #[derive(Debug)]
 struct Player<'a, T> {

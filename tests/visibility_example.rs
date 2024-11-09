@@ -1,6 +1,6 @@
 mod example {
-    use std::marker::PhantomData;
-    use std::mem::MaybeUninit;
+    use core::marker::PhantomData;
+    use core::mem::MaybeUninit;
 
     use state_shift::{impl_state, type_state};
 

@@ -121,7 +121,7 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     // the reason for using `fn() -> T` is to: https://github.com/ozgunozerk/state-shift/issues/1
     let phantom_fields = state_idents
         .iter()
-        .map(|ident| quote!(::std::marker::PhantomData<fn() -> #ident>))
+        .map(|ident| quote!(::core::marker::PhantomData<fn() -> #ident>))
         .collect::<Vec<_>>();
 
     // Generate the final output

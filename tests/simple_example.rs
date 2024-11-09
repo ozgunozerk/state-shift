@@ -96,7 +96,7 @@ impl PlayerBuilder {
 // keep in mind that you need to provide the hidden `_state` field for your methods.
 impl PlayerBuilder {
     fn my_weird_method(&self) -> Self {
-        use std::marker::PhantomData;
+        use core::marker::PhantomData;
 
         Self {
             race: Some(Race::Human),
