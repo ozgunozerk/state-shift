@@ -15,8 +15,30 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     parsed_args: &Punctuated<Ident, Token![,]>,
     impl_generics: &syn::Generics,
 ) -> proc_macro2::TokenStream {
-    // existing generics and lifetimes
-    let mut combined_generics = impl_generics.params.clone();
+    // existing generics and lifetimes, remove bounds from generics and lifetimes
+    let mut combined_generics: Punctuated<_, Token![,]> = impl_generics
+        .params
+        .iter()
+        .map(|param| match param {
+            syn::GenericParam::Type(type_param) => syn::GenericParam::Type(syn::TypeParam {
+                attrs: type_param.attrs.clone(),
+                ident: type_param.ident.clone(),
+                colon_token: None, // Remove bounds
+                bounds: Punctuated::new(),
+                eq_token: type_param.eq_token,
+                default: type_param.default.clone(),
+            }),
+            syn::GenericParam::Lifetime(lifetime_param) => {
+                syn::GenericParam::Lifetime(syn::LifetimeParam {
+                    attrs: lifetime_param.attrs.clone(),
+                    lifetime: lifetime_param.lifetime.clone(),
+                    colon_token: None, // Remove bounds
+                    bounds: Punctuated::new(),
+                })
+            }
+            syn::GenericParam::Const(const_param) => syn::GenericParam::Const(const_param.clone()),
+        })
+        .collect();
 
     // Append the full list of arguments from `#[require]` macro: (A, B, State1, ...)
     combined_generics.extend(parsed_args.iter().map(|ident| {
