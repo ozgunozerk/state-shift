@@ -13,7 +13,7 @@ pub fn impl_state_inner(item: TokenStream) -> TokenStream {
         Type::Path(ref type_path) => {
             let last_segment = type_path.path.segments.last().unwrap();
             let struct_name = last_segment.ident.clone();
-            let struct_generics = &last_segment.arguments; // Extract generics here
+            let struct_generics = &last_segment.arguments;
             (struct_name, struct_generics)
         }
         _ => panic!("Unsupported type for impl block"),
