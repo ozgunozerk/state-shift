@@ -3,7 +3,8 @@ use syn::{punctuated::Punctuated, Ident, PathArguments, ReturnType, Token, Type,
 pub fn switch_to_inner(
     fn_output: &ReturnType,
     parsed_args: &Punctuated<Ident, Token![,]>,
-    struct_name: &Ident, // New parameter for the struct name (e.g., Player)
+    struct_name: &Ident,
+    fn_name: &Ident,
 ) -> ReturnType {
     let generic_idents: Vec<syn::GenericArgument> = parsed_args
         .iter()
@@ -17,13 +18,21 @@ pub fn switch_to_inner(
 
     let original_return_type = match &fn_output {
         ReturnType::Type(_, ty) => &**ty,
-        _ => panic!("Expected a return type."),
+        _ => panic!(
+            "Function `{}`: Expected a return type with explicit type annotation (e.g., '-> Type'), but found none.",
+            fn_name
+        ),
     };
 
     let mut modified_return_type = original_return_type.clone();
 
     // Recursively modify the return type, using the struct_name to match
-    recursively_modify_return_type(&mut modified_return_type, generic_idents, struct_name);
+    recursively_modify_return_type(
+        &mut modified_return_type,
+        generic_idents,
+        struct_name,
+        fn_name,
+    );
 
     ReturnType::Type(Default::default(), Box::new(modified_return_type))
 }
@@ -31,7 +40,8 @@ pub fn switch_to_inner(
 fn recursively_modify_return_type(
     ty: &mut Type,
     generic_idents: Vec<syn::GenericArgument>,
-    struct_name: &Ident, // Target struct name (e.g., Player)
+    struct_name: &Ident,
+    fn_name: &Ident,
 ) {
     match ty {
         Type::Path(type_path) => {
@@ -39,7 +49,7 @@ fn recursively_modify_return_type(
 
             if last_segment.ident == *struct_name {
                 // Match the provided struct name (e.g., Player)
-                modify_type_path(type_path, generic_idents);
+                modify_type_path(type_path, generic_idents, fn_name);
             } else {
                 // Handle cases where it's a wrapper type like Result<Player> or Option<Player>
                 if let PathArguments::AngleBracketed(arguments) = &mut last_segment.arguments {
@@ -50,17 +60,25 @@ fn recursively_modify_return_type(
                                 inner_type,
                                 generic_idents.clone(),
                                 struct_name,
+                                fn_name,
                             );
                         }
                     }
                 }
             }
         }
-        _ => panic!("Expected a path type."),
+        _ => panic!(
+            "Function `{}`: Expected a type path (like MyStruct or std::option::Option) in the return type, but found a different type variant (such as array, reference, or tuple).",
+            fn_name
+        ),
     }
 }
 
-fn modify_type_path(type_path: &mut TypePath, generic_idents: Vec<syn::GenericArgument>) {
+fn modify_type_path(
+    type_path: &mut TypePath,
+    generic_idents: Vec<syn::GenericArgument>,
+    fn_name: &Ident,
+) {
     let last_segment = type_path.path.segments.last_mut().unwrap();
 
     match &mut last_segment.arguments {
@@ -76,6 +94,9 @@ fn modify_type_path(type_path: &mut TypePath, generic_idents: Vec<syn::GenericAr
                     gt_token: Default::default(),
                 });
         }
-        _ => panic!("Unsupported path arguments in return type."),
+        _ => panic!(
+            "Function `{}`: Unsupported path arguments in return type of the function.",
+            fn_name
+        ),
     }
 }
