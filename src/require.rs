@@ -14,42 +14,22 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     struct_name: &Ident,
     parsed_args: &Punctuated<Ident, Token![,]>,
     impl_generics: &syn::Generics,
+    struct_generics: &syn::PathArguments,
 ) -> proc_macro2::TokenStream {
-    // existing generics and lifetimes, remove bounds from generics and lifetimes
-    let mut combined_generics: Punctuated<_, Token![,]> = impl_generics
-        .params
-        .iter()
-        .map(|param| match param {
-            syn::GenericParam::Type(type_param) => syn::GenericParam::Type(syn::TypeParam {
-                attrs: type_param.attrs.clone(),
-                ident: type_param.ident.clone(),
-                colon_token: None, // Remove bounds
-                bounds: Punctuated::new(),
-                eq_token: type_param.eq_token,
-                default: type_param.default.clone(),
-            }),
-            syn::GenericParam::Lifetime(lifetime_param) => {
-                syn::GenericParam::Lifetime(syn::LifetimeParam {
-                    attrs: lifetime_param.attrs.clone(),
-                    lifetime: lifetime_param.lifetime.clone(),
-                    colon_token: None, // Remove bounds
-                    bounds: Punctuated::new(),
-                })
-            }
-            syn::GenericParam::Const(const_param) => syn::GenericParam::Const(const_param.clone()),
-        })
-        .collect();
+    // Convert the struct's generics into a Punctuated collection
+    let mut combined_generics = match struct_generics {
+        syn::PathArguments::AngleBracketed(angle_bracketed) => angle_bracketed.args.clone(),
+        syn::PathArguments::None => Punctuated::new(),
+        _ => panic!("Unsupported generics format for struct"),
+    };
 
     // Append the full list of arguments from `#[require]` macro: (A, B, State1, ...)
     combined_generics.extend(parsed_args.iter().map(|ident| {
-        GenericParam::Type(syn::TypeParam {
-            attrs: Vec::new(),
-            ident: ident.clone(),
-            colon_token: None,
-            bounds: Punctuated::new(),
-            eq_token: None,
-            default: None,
-        })
+        // Convert each parsed argument into a GenericArgument (which is a TypeParam)
+        syn::GenericArgument::Type(syn::Type::Path(syn::TypePath {
+            qself: None,
+            path: syn::Path::from(ident.clone()), // Use the ident for the type path
+        }))
     }));
 
     // put the sealed trait boundary for the generics:

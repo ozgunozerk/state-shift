@@ -8,9 +8,14 @@ pub fn impl_state_inner(item: TokenStream) -> TokenStream {
     // Parse the impl block
     let mut input = parse_macro_input!(item as ItemImpl);
 
-    // Extract the type name of the impl block (e.g., Player)
-    let struct_name = match *input.self_ty {
-        Type::Path(ref type_path) => type_path.path.segments.last().unwrap().ident.clone(),
+    // Extract the type name and generics of the struct being implemented
+    let (struct_name, struct_generics) = match *input.self_ty {
+        Type::Path(ref type_path) => {
+            let last_segment = type_path.path.segments.last().unwrap();
+            let struct_name = last_segment.ident.clone();
+            let struct_generics = &last_segment.arguments; // Extract generics here
+            (struct_name, struct_generics)
+        }
         _ => panic!("Unsupported type for impl block"),
     };
 
@@ -29,12 +34,13 @@ pub fn impl_state_inner(item: TokenStream) -> TokenStream {
                     &struct_name,
                     &require_args,
                     &input.generics,
+                    struct_generics,
                 )
             } else {
                 quote! { #method }
             };
 
-            // Step 3: Push the modified method to the list of methods
+            // Push the modified method to the list of methods
             methods.push(modified_method);
         }
     }
