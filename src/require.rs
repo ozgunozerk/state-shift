@@ -104,11 +104,13 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     let fn_output = &input_fn.sig.output;
     let switch_to_args = extract_macro_args(&mut other_attrs, "switch_to", struct_name);
 
-    // Generate the impl block for the method based on the extracted #[require] arguments
+    // Generate the impl block for the method based on the extracted #[switch_to] arguments
     let new_output = if let Some(switch_to_args) = switch_to_args {
         switch_to_inner(fn_output, &switch_to_args, struct_name, &input_fn.sig.ident)
     } else {
-        fn_output.clone()
+        // there is no `#[switch_to]` macro, so we use the `#[require]` macro's arguments instead
+        // to keep the type same for the input and the output
+        switch_to_inner(fn_output, &parsed_args, struct_name, &input_fn.sig.ident)
     };
 
     // construct the signature again
