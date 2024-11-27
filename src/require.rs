@@ -110,7 +110,7 @@ pub fn generate_impl_block_for_method_based_on_require_args(
     } else {
         // there is no `#[switch_to]` macro, so we use the `#[require]` macro's arguments instead
         // to keep the type same for the input and the output
-        switch_to_inner(fn_output, &parsed_args, struct_name, &input_fn.sig.ident)
+        switch_to_inner(fn_output, parsed_args, struct_name, &input_fn.sig.ident)
     };
 
     // construct the signature again
