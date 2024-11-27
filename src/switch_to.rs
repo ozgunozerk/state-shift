@@ -1,4 +1,7 @@
-use syn::{punctuated::Punctuated, Ident, PathArguments, ReturnType, Token, Type, TypePath};
+use syn::{
+    punctuated::Punctuated, visit_mut::VisitMut, Ident, PathArguments, ReturnType, Token, Type,
+    TypePath,
+};
 
 pub fn switch_to_inner(
     fn_output: &ReturnType,
@@ -37,56 +40,45 @@ pub fn switch_to_inner(
     ReturnType::Type(Default::default(), Box::new(modified_return_type))
 }
 
+// utilize `visit_type_mut` to handle all the variants of the return type in `syn`
+// otherwise, we would have to write a lot of match arms
+fn visit_type(ty: &mut Type, visitor: impl Fn(&mut TypePath)) {
+    struct TypeVisitor<F>(F);
+    impl<F: Fn(&mut TypePath)> VisitMut for TypeVisitor<F> {
+        fn visit_type_path_mut(&mut self, type_path: &mut TypePath) {
+            (self.0)(type_path);
+        }
+    }
+    TypeVisitor(visitor).visit_type_mut(ty);
+}
+
 fn recursively_modify_return_type(
     ty: &mut Type,
     generic_idents: Vec<syn::GenericArgument>,
     struct_name: &Ident,
     fn_name: &Ident,
 ) {
-    match ty {
-        Type::Path(type_path) => {
-            let last_segment = type_path.path.segments.last_mut().unwrap();
-
-            if last_segment.ident == *struct_name {
-                // Match the provided struct name (e.g., Player)
-                modify_type_path(type_path, generic_idents, fn_name);
-            } else {
-                // Handle cases where it's a wrapper type like Result<Player> or Option<Player>
-                if let PathArguments::AngleBracketed(arguments) = &mut last_segment.arguments {
-                    for arg in &mut arguments.args {
-                        if let syn::GenericArgument::Type(inner_type) = arg {
-                            // Recurse into the inner type to check for Player (or any target struct)
-                            recursively_modify_return_type(
-                                inner_type,
-                                generic_idents.clone(),
-                                struct_name,
-                                fn_name,
-                            );
-                        }
-                    }
-                }
+    visit_type(ty, |type_path| {
+        // Check each segment in the path
+        for segment in type_path.path.segments.iter_mut() {
+            if segment.ident == *struct_name {
+                modify_segment(segment, generic_idents.clone(), fn_name);
             }
         }
-        _ => panic!(
-            "Function `{}`: Expected a type path (like MyStruct or std::option::Option) in the return type, but found a different type variant (such as array, reference, or tuple).",
-            fn_name
-        ),
-    }
+    });
 }
 
-fn modify_type_path(
-    type_path: &mut TypePath,
+fn modify_segment(
+    segment: &mut syn::PathSegment,
     generic_idents: Vec<syn::GenericArgument>,
     fn_name: &Ident,
 ) {
-    let last_segment = type_path.path.segments.last_mut().unwrap();
-
-    match &mut last_segment.arguments {
+    match &mut segment.arguments {
         PathArguments::AngleBracketed(arguments) => {
             arguments.args.extend(generic_idents);
         }
         PathArguments::None => {
-            last_segment.arguments =
+            segment.arguments =
                 PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
                     args: generic_idents.into_iter().collect(),
                     colon2_token: None,
@@ -95,7 +87,7 @@ fn modify_type_path(
                 });
         }
         _ => panic!(
-            "Function `{}`: Unsupported path arguments in return type of the function.",
+            "Function `{}`: Unsupported arguments in return type of the function.",
             fn_name
         ),
     }
