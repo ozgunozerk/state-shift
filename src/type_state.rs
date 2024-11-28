@@ -25,14 +25,10 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     6. `(State1, State1)`
      */
     let input_args: Vec<_> = args.into_iter().collect();
-    let states: Vec<Ident> =
-        extract_idents_from_group(&input_args[2], struct_name, "expected a list of states");
+    let states: Vec<Ident> = extract_idents_from_group(&input_args[2], "expected a list of states");
 
-    let default_slots: Vec<Ident> = extract_idents_from_group(
-        &input_args[6],
-        struct_name,
-        "expected a list of default slots",
-    );
+    let default_slots: Vec<Ident> =
+        extract_idents_from_group(&input_args[6], "expected a list of default slots");
 
     // Generate the marker structs and sealing traits
     let sealer_trait_name = Ident::new(&format!("Sealer{}", struct_name), struct_name.span());

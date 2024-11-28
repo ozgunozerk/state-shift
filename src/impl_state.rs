@@ -25,7 +25,7 @@ pub fn impl_state_inner(item: TokenStream) -> TokenStream {
     for item in input.items.iter_mut() {
         if let ImplItem::Fn(ref mut method) = item {
             // Extract `#[require]` arguments if they exist
-            let require_args = extract_macro_args(&mut method.attrs, "require", &struct_name);
+            let require_args = extract_macro_args(&mut method.attrs, "require");
 
             // Generate the impl block for the method based on the extracted #[require] arguments
             let modified_method = if let Some(require_args) = require_args {
