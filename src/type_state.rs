@@ -124,6 +124,13 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
         .map(|ident| quote!(::core::marker::PhantomData<fn() -> #ident>))
         .collect::<Vec<_>>();
 
+    // Get the struct's attributes (other macros) excluding the #[type_state] macro
+    let attrs: Vec<_> = input_struct
+        .attrs
+        .iter()
+        .filter(|attr| !attr.path().is_ident("type_state"))
+        .collect();
+
     // Generate the final output
     let output = quote! {
         mod #sealed_mod_name {
@@ -138,6 +145,7 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
 
         #(#trait_impls)*
 
+        #(#attrs)*
         #[allow(clippy::type_complexity)]
         #visibility struct #struct_name<#combined_generics>
         #merged_where_clause

@@ -14,6 +14,7 @@ enum Race {
     Human,
 }
 
+#[derive(Debug)]
 #[type_state(states = (Initial, RaceSet, LevelSet, SkillSlotsSet), slots = (Initial))]
 struct PlayerBuilder {
     race: Option<Race>,
@@ -132,5 +133,12 @@ mod tests {
 
         assert_eq!(player.level, another_player.level);
         assert_eq!(player.skill_slots, another_player.skill_slots);
+    }
+
+    #[test]
+    fn other_macros_are_preserved() {
+        let player = PlayerBuilder::new();
+        println!("{:?}", player); // ensures `#[derive(Debug)]` is preserved
+        assert_eq!(player.level, None);
     }
 }
