@@ -647,6 +647,47 @@ And you know how Rust compiler is. It is very strict about types!
 > [!IMPORTANT]
 > You only need to worry about `_state` field if you want to opt-out of the macros! So, keep using the macros, and keep yourself stress free 🥂
 
+
+### 5. Don't use the same state names across different structs
+
+> [!CAUTION]
+>
+> ```rust
+> #[type_state(states = (Initial, RaceSet, LevelSet), slots = (Initial))]
+> struct PlayerBuilder {
+>     race: Option<Race>,
+>     level: Option<u8>,
+> }
+>
+> #[type_state(states = (Initial, RaceSet, LevelSet), slots = (Initial))]
+> struct AnotherBuilder {
+>     race: Option<Race>,
+>     level: Option<u8>,
+> }
+> ```
+
+
+> [!TIP]
+>
+> ```rust
+> #[type_state(states = (Initial, RaceSet, LevelSet), slots = (Initial))]
+> struct PlayerBuilder {
+>     race: Option<Race>,
+>     level: Option<u8>,
+> }
+>
+> #[type_state(states = (OpInitial, OpRaceSet, OpLevelSet), slots = (OpInitial))]
+> struct OpponentBuilder {
+>     race: Option<Race>,
+>     level: Option<u8>,
+> }
+> ```
+
+It's up to you how to do the namings, but don't use the same state names across different structs.
+
+`#[type_state]` macro generates marker structs for each state. If you use the same state names, the macro will try to generate multiple marker structs with the same name, causing compile-time errors.
+
+
 ## Tips
 
 ### 1. Tracking multiple states
