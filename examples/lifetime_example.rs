@@ -1,3 +1,5 @@
+#![allow(clippy::needless_lifetimes)]
+
 /// Here you can find the `cargo expand` output of the `simple_lifetime.rs` test file.
 /// This is a rough `expansion`, ignores some minor details for readability,
 /// and does not expand irrelevant parts of the code (e.g. `#[derive(Debug)]`, etc.)
@@ -102,6 +104,7 @@ impl<'a, T> PlayerBuilder<'a, T, LevelSet> {
         }
     }
 }
+
 impl<'a, T, A> PlayerBuilder<'a, T, A>
 where
     A: TypeStateProtector,
