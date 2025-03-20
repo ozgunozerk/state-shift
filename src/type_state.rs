@@ -1,6 +1,6 @@
-use inflector::cases::snakecase::to_snake_case;
 use proc_macro::TokenStream;
 use quote::quote;
+use stringcase::snake_case;
 use syn::{parse_macro_input, Fields, Ident, ItemStruct};
 
 use crate::extract_idents_from_group;
@@ -33,7 +33,7 @@ pub fn type_state_inner(args: TokenStream, input: TokenStream) -> TokenStream {
     // Generate the marker structs and sealing traits
     let sealer_trait_name = Ident::new(&format!("Sealer{}", struct_name), struct_name.span());
     let sealed_mod_name = Ident::new(
-        &format!("sealed_{}", to_snake_case(&struct_name.to_string())),
+        &format!("sealed_{}", snake_case(&struct_name.to_string())),
         struct_name.span(),
     );
 
