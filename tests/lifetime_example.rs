@@ -1,3 +1,5 @@
+#![allow(clippy::needless_lifetimes)]
+
 use state_shift::{impl_state, type_state};
 
 use core::fmt::Debug;
